@@ -1,0 +1,1 @@
+LoxCLI.main()
