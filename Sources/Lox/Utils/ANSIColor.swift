@@ -1,3 +1,10 @@
+//
+//  ANSIColor.swift
+//
+//
+//  Created by Marino Felipe on 18.04.22.
+//
+
 enum ANSIColor: String, CaseIterable {
     case black = "\u{001B}[0;30m"
     case red = "\u{001B}[0;31m"

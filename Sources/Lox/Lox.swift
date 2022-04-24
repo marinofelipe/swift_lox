@@ -1,6 +1,15 @@
+//
+//  Lox.swift
+//
+//
+//  Created by Marino Felipe on 18.04.22.
+//
+
 import Foundation
 
 public enum Lox {
+    private static var hadError = false
+
     public static func main(args: [String]) throws {
         if args.count > 1 {
             print("Usage: swift_lox [script]")
@@ -15,6 +24,10 @@ public enum Lox {
     private static func runFile(path: String) throws {
         let fileContents = try String(contentsOfFile: path, encoding: .utf8)
         run(source: fileContents)
+
+        if hadError {
+            exit(65)
+        }
     }
 
     private static func runPrompt() throws {
@@ -38,15 +51,27 @@ public enum Lox {
             }
 
             run(source: inputLine)
+            hadError = false
         }
     }
 
     private static func run(source: String) {
-        let dumbTokens = source.split(separator: " ")
+        let scanner = Scanner(source: source)
+        let tokens = scanner.scanTokens()
 
-        // For now, just print the tokens.
-        for token in dumbTokens {
-            print(token)
-        }
+        print(tokens)
+    }
+
+    static func error(line: Int = #line, message: String) {
+        report(line: line, where: "", message: message)
+    }
+
+    private static func report(
+        line: Int,
+        where: String,
+        message: String
+    ) {
+        print("[line \(line)] Error \(`where`): \(message)", terminator: "\n")
+        hadError = true
     }
 }
