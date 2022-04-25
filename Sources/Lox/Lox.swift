@@ -59,7 +59,8 @@ public enum Lox {
         let scanner = Scanner(source: source)
         let tokens = scanner.scanTokens()
 
-        print(tokens)
+        print("Here are the Scanner generated tokens:", terminator: "\n")
+        print(tokens.map(\.description).joined(separator: "\n"))
     }
 
     static func error(line: Int = #line, message: String) {

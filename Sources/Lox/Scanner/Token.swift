@@ -74,9 +74,7 @@ struct Token: CustomStringConvertible {
     let literal: LiteralType?
     let line: Int
 
-    var description: String {
-        "\(type) \(lexeme) \(literal ?? .string("none"))"
-    }
+    var description: String { "\(type) \(lexeme)" }
 
     static func makeEndOfFile(line: Int) -> Self {
         .init(

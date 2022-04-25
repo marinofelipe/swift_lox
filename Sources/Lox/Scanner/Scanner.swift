@@ -124,7 +124,7 @@ final class Scanner {
                 identifier()
             } else {
                 // TODO: Inject error reporting dependency if there's time for that :P
-                Lox.error(line: line, message: "Unexpected character.")
+                Lox.error(line: line, message: "Unexpected character: \(nextCharacter)")
             }
         }
     }
