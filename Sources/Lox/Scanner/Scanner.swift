@@ -7,24 +7,24 @@
 
 import Darwin
 
-fileprivate let reservedKeywords: [String: TokenType] = {
+fileprivate let reservedKeywords: [String: TokenType.Keyword] = {
     [
-        "and": .keyword(.AND),
-        "class": .keyword(.CLASS),
-        "else": .keyword(.ELSE),
-        "false": .keyword(.FALSE),
-        "for": .keyword(.FOR),
-        "fun": .keyword(.FUN),
-        "if": .keyword(.IF),
-        "nil": .keyword(.NIL),
-        "or": .keyword(.OR),
-        "print": .keyword(.PRINT),
-        "return": .keyword(.RETURN),
-        "super": .keyword(.SUPER),
-        "this": .keyword(.THIS),
-        "true": .keyword(.TRUE),
-        "var": .keyword(.VAR),
-        "while": .keyword(.WHILE)
+        "and": .AND,
+        "class": .CLASS,
+        "else": .ELSE,
+        "false": .FALSE,
+        "for": .FOR,
+        "fun": .FUN,
+        "if": .IF,
+        "nil": .NIL,
+        "or": .OR,
+        "print": .PRINT,
+        "return": .RETURN,
+        "super": .SUPER,
+        "this": .THIS,
+        "true": .TRUE,
+        "var": .VAR,
+        "while": .WHILE
     ]
 }()
 
@@ -107,6 +107,8 @@ final class Scanner {
                 while peek() != "\n" && !isAtEnd() {
                     advance()
                 }
+            } else if match(expected: "*") {
+                commentBlock()
             } else {
                 addToken(type: .singleCharacter(.SLASH))
             }
@@ -129,13 +131,37 @@ final class Scanner {
         }
     }
 
+    private func commentBlock() {
+        let isBlockEndNext = {
+            self.peek() == "*" && self.peekNext() == "/"
+        }
+        while !isBlockEndNext() && !isAtEnd() {
+            advance()
+        }
+
+        // The closing */.
+        advance()
+        advance()
+
+        // TODO: Support nested one
+
+        // TODO: Should map the content?
+//        // substring excluding the comment start and end
+//        let commentBlock = source.substring(
+//            from: source.index(startIndex, offsetBy: 2),
+//            to: source.index(currentIndex, offsetBy: -2)
+//        )
+
+        addToken(type: .oneOrTwoCharacter(.COMMENT_BLOCK))
+    }
+
     private func identifier() {
         while peek().isAlphaNumeric {
             advance()
         }
 
         let text = source.substring(from: startIndex, to: currentIndex)
-        let tokenType = reservedKeywords[text] ?? .literal(.IDENTIFIER)
+        let tokenType: TokenType = reservedKeywords[text].map(TokenType.keyword) ?? .literal(.IDENTIFIER)
 
         addToken(type: tokenType)
     }

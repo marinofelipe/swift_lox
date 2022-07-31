@@ -23,6 +23,7 @@ enum TokenType: Equatable {
     enum OneOrTwoCharacter: Equatable {
         case BANG,
              BANG_EQUAL,
+             COMMENT_BLOCK,
              EQUAL,
              EQUAL_EQUAL,
              GREATER,
