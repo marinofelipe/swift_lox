@@ -132,25 +132,55 @@ final class Scanner {
     }
 
     private func commentBlock() {
-        let isBlockEndNext = {
-            self.peek() == "*" && self.peekNext() == "/"
+        var commentBlockStack = 0
+
+        enum BlockEvaluationResult {
+            case blockStart
+            case blockEnd
+            case none
         }
-        while !isBlockEndNext() && !isAtEnd() {
-            advance()
+
+        let blockEvaluation: () -> BlockEvaluationResult = {
+            let currentCharacter = self.peek()
+            let nextCharacter = self.peekNext()
+
+            switch (currentCharacter, nextCharacter) {
+            case ("/", "*"):
+                return .blockStart
+            case ("*", "/"):
+                return .blockEnd
+            default:
+                return .none
+            }
         }
 
-        // The closing */.
-        advance()
-        advance()
+        let advanceTwoForBlockStartOrEnd = {
+            self.advance()
+            self.advance()
+        }
 
-        // TODO: Support nested one
+        while
+            case let blockEvaluation = blockEvaluation(),
+            (blockEvaluation != .blockEnd || commentBlockStack > 0)
+                && !isAtEnd()
+        {
+            if blockEvaluation == .blockStart {
+                commentBlockStack += 1
 
-        // TODO: Should map the content?
-//        // substring excluding the comment start and end
-//        let commentBlock = source.substring(
-//            from: source.index(startIndex, offsetBy: 2),
-//            to: source.index(currentIndex, offsetBy: -2)
-//        )
+                // The opening /*
+                advanceTwoForBlockStartOrEnd()
+            } else if blockEvaluation == .blockEnd {
+                commentBlockStack -= 1
+
+                // The closing */
+                advanceTwoForBlockStartOrEnd()
+            } else {
+                advance()
+            }
+        }
+
+        // The closing */
+        advanceTwoForBlockStartOrEnd()
 
         addToken(type: .oneOrTwoCharacter(.COMMENT_BLOCK))
     }
