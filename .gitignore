@@ -12,3 +12,6 @@ Packages/
 Package.pins
 *.xcodeproj
 .build/
+
+# MacOS
+*.DS_Store
