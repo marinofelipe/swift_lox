@@ -42,7 +42,7 @@ public enum Lox {
 
     while let inputLine = readLine(strippingNewline: true) {
       print(
-        "\(ANSIColor.boldPurple.rawValue)>\(ANSIColor.default.rawValue)",
+        "\(ANSIColor.boldPurple.rawValue)>\(ANSIColor .default.rawValue)",
         terminator: ""
       )
 

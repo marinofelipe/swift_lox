@@ -126,10 +126,11 @@ final class Scanner {
         identifier()
       } else {
         // TODO: Inject error reporting dependency if there's time for that :P
+        // TOOD: Coalesce a run of invalid characters into a single error for a nicer UX
         Lox.error(line: line, message: "Unexpected character: \(nextCharacter)")
       }
     }
-  }
+  } 
 
   private func commentBlock() {
     var commentBlockStack = 0

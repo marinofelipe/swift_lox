@@ -1,6 +1,6 @@
 //
 //  TokenType.swift
-//  
+//
 //
 //  Created by Marino Felipe on 22.04.22.
 //
@@ -19,7 +19,7 @@ enum TokenType: Equatable {
          SLASH,
          STAR
   }
-  
+
   enum OneOrTwoCharacter: Equatable {
     case BANG,
          BANG_EQUAL,
@@ -31,13 +31,13 @@ enum TokenType: Equatable {
          LESS,
          LESS_EQUAL
   }
-  
+
   enum Literal: Equatable {
     case IDENTIFIER,
          STRING,
          NUMBER
   }
-  
+
   enum Keyword: Equatable {
     case AND,
          CLASS,
@@ -56,7 +56,7 @@ enum TokenType: Equatable {
          VAR,
          WHILE
   }
-  
+
   case singleCharacter(SingleCharacter)
   case oneOrTwoCharacter(OneOrTwoCharacter)
   case literal(Literal)
@@ -69,14 +69,14 @@ enum LiteralType: Equatable {
   case number(Double)
 }
 
-struct Token: CustomStringConvertible {
+struct Token: CustomStringConvertible, Equatable {
   let type: TokenType
   let lexeme: String
   let literal: LiteralType?
   let line: Int
-  
+
   var description: String { "\(type) \(lexeme)" }
-  
+
   static func makeEndOfFile(line: Int) -> Self {
     .init(
       type: .EOF,
