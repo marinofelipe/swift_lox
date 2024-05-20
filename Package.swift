@@ -32,7 +32,7 @@ let package = Package(
     .target(
       name: "Lox",
       plugins: [
-        .plugin(name: "LoxTreesPlugin")
+        .plugin(name: "LoxASTPlugin")
       ]
     ),
     .testTarget(
@@ -47,17 +47,17 @@ let package = Package(
       ]
     ),
     .executableTarget(
-      name: "LoxTrees",
+      name: "LoxAST",
       dependencies: [
         .product(name: "ArgumentParser", package: "swift-argument-parser"),
         .product(name: "SwiftToolsSupport", package: "swift-tools-support-core")
       ]
     ),
     .plugin(
-      name: "LoxTreesPlugin",
+      name: "LoxASTPlugin",
       capability: .buildTool,
       dependencies: [
-        .target(name: "LoxTrees")
+        .target(name: "LoxAST")
       ]
     )
   ]

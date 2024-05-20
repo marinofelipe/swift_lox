@@ -5,8 +5,8 @@
 //  Created by Marino Felipe on 22.04.22.
 //
 
-enum TokenType: Equatable {
-  enum SingleCharacter: Equatable {
+enum TokenType: Equatable, CustomStringConvertible {
+  enum SingleCharacter: String, Equatable {
     case LEFT_PARENTHESIS,
          RIGHT_PARENTHESIS,
          LEFT_BRACE,
@@ -20,7 +20,7 @@ enum TokenType: Equatable {
          STAR
   }
 
-  enum OneOrTwoCharacter: Equatable {
+  enum OneOrTwoCharacter: String, Equatable {
     case BANG,
          BANG_EQUAL,
          COMMENT_BLOCK,
@@ -32,13 +32,13 @@ enum TokenType: Equatable {
          LESS_EQUAL
   }
 
-  enum Literal: Equatable {
+  enum Literal: String, Equatable {
     case IDENTIFIER,
          STRING,
          NUMBER
   }
 
-  enum Keyword: Equatable {
+  enum Keyword: String, Equatable {
     case AND,
          CLASS,
          ELSE,
@@ -62,11 +62,35 @@ enum TokenType: Equatable {
   case literal(Literal)
   case keyword(Keyword)
   case EOF
+
+  var description: String {
+    switch self {
+    case let .singleCharacter(singleCharacter):
+      return singleCharacter.rawValue
+    case let .keyword(keyword):
+      return keyword.rawValue
+    case let .oneOrTwoCharacter(oneOrTwoCharacter):
+      return oneOrTwoCharacter.rawValue
+    case let .literal(literal):
+      return literal.rawValue
+    case .EOF:
+      return "EOF"
+    }
+  }
 }
 
-enum LiteralType: Equatable {
+enum LiteralType: Equatable, CustomStringConvertible {
   case string(String)
   case number(Double)
+
+  var description: String {
+    switch self {
+    case let .number(value):
+      return value.description
+    case let .string(value):
+      return value
+    }
+  }
 }
 
 struct Token: CustomStringConvertible, Equatable {

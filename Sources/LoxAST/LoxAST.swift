@@ -1,5 +1,5 @@
 //
-//  LoxTrees.swift
+//  LoxAST.swift
 //
 //
 //  Created by Marino Felipe on 01.04.24.
@@ -10,7 +10,7 @@ import Foundation
 import TSCBasic
 
 @main
-struct LoxTrees: ParsableCommand {
+struct LoxAST: ParsableCommand {
   @Option(help: "The relative path to where the generated files will be created")
   var outputDir: String
 
@@ -19,16 +19,16 @@ struct LoxTrees: ParsableCommand {
   }
 }
 
-public enum GenerateAST {
+enum GenerateAST {
   public static func main(outputDir: String) throws {
     try defineAST(
       outputDir: outputDir,
       baseName: "Expression",
       types: [
-        // Using my own notation/form with `;` so that `:` can be only used for the properties
+        // Using my own notation/form with `;` so that `:` can be only used for the typed properties
         "Binary   ; left: Expression, `operator`: Token, right: Expression",
         "Grouping ; expression: Expression",
-        "Literal  ; value: String",
+        "Literal  ; value: String?",
         "Unary    ; `operator`: Token, right: Expression"
       ]
     )
@@ -51,6 +51,7 @@ public enum GenerateAST {
 
       fileHandle.write("import Foundation\n\n".data(using: .utf8)!)
       fileHandle.write("indirect enum \(baseName): Equatable {\n".data(using: .utf8)!)
+
       fileHandle.write("  // The AST cases.\n".data(using: .utf8)!)
 
       struct ClassAndProperties: Equatable {

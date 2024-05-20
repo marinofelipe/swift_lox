@@ -31,18 +31,20 @@ public enum Lox {
   }
 
   private static func runPrompt() throws {
-    print("""
-        \(ANSIColor.boldPurple.rawValue)Welcome to swift-lox
+    print(
+      """
+      \(ANSIColor.boldPurple.rawValue)Welcome to swift-lox
 
-        \(ANSIColor.default.rawValue)A swift based lox interpreter
+      \(ANSIColor.default.rawValue)A swift based lox interpreter
 
-        Have fun :)...
-        """
+      Have fun :D ..
+      """,
+      terminator: "\n\n"
     )
 
     while let inputLine = readLine(strippingNewline: true) {
       print(
-        "\(ANSIColor.boldPurple.rawValue)>\(ANSIColor .default.rawValue)",
+        "\n\(ANSIColor.boldPurple.rawValue)>\(ANSIColor .default.rawValue) ",
         terminator: ""
       )
 
@@ -59,8 +61,18 @@ public enum Lox {
     let scanner = Scanner(source: source)
     let tokens = scanner.scanTokens()
 
-    print("Here are the Scanner generated tokens:", terminator: "\n")
+    print("Here are the Scanner generated tokens:", terminator: "\n\n")
     print(tokens.map(\.description).joined(separator: "\n"))
+    print("\n")
+
+    let parser = Parser(tokens: tokens)
+    let expression = parser.parse()
+
+    // stop if there's syntax errors
+    guard let expression, !hadError else { return }
+
+    let astPrinter = ASTPrinter()
+    astPrinter.print(expression)
   }
 
   static func error(line: Int = #line, message: String) {
@@ -74,5 +86,13 @@ public enum Lox {
   ) {
     print("[line \(line)] Error \(`where`): \(message)", terminator: "\n")
     hadError = true
+  }
+
+  static func error(token: Token, message: String) {
+    report(
+      line: token.line,
+      where: token.type == TokenType.EOF ? " at end" : " at '" + token.lexeme + "'",
+      message: message
+    )
   }
 }

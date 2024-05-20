@@ -1,5 +1,5 @@
 //
-//  LoxTreesPlugin.swift
+//  LoxASTPlugin.swift
 //
 //
 //  Created by Marino Felipe on 01.04.24.
@@ -9,7 +9,7 @@ import Foundation
 import PackagePlugin
 
 @main
-struct LoxTreesPlugin: BuildToolPlugin {
+struct LoxASTPlugin: BuildToolPlugin {
   func createBuildCommands(
     context: PluginContext,
     target: Target
@@ -17,7 +17,7 @@ struct LoxTreesPlugin: BuildToolPlugin {
     [
       .buildCommand(
         displayName: "Lox AST Generator",
-        executable: try context.tool(named: "LoxTrees").path,
+        executable: try context.tool(named: "LoxAST").path,
         arguments: [
           "--output-dir",
           context.pluginWorkDirectory

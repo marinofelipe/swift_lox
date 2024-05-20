@@ -130,7 +130,7 @@ final class Scanner {
         Lox.error(line: line, message: "Unexpected character: \(nextCharacter)")
       }
     }
-  } 
+  }
 
   private func commentBlock() {
     var commentBlockStack = 0
@@ -286,7 +286,7 @@ final class Scanner {
     defer {
       currentIndex = source.index(after: currentIndex)
     }
-    
+
     return source[currentIndex]
   }
 
