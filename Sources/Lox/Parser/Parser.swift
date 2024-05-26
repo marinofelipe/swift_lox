@@ -65,6 +65,63 @@
 //
 // The traditional place in grammar to synchronize is between statements
 
+
+// Grammar //
+//
+//“It’s called “recursive descent” because it walks down the grammar”
+//
+//Excerpt From
+//Crafting Interpreters
+//Robert Nystrom
+//https://books.apple.com/de/book/crafting-interpreters/id1578795812?l=en-GB
+//This material may be protected by copyright.
+
+
+// MARK: - Grammar
+
+// From Lower to Higher precedence
+private enum BinaryExpression: CaseIterable {
+  case comma // https://en.wikipedia.org/wiki/Comma_operator
+  case equality
+  case comparison
+  case term
+  case factor
+  // then, unary
+
+  var tokenTypesToMatch: [TokenType] {
+    switch self {
+    case .comma:
+      return [
+        .singleCharacter(.COMMA)
+      ]
+    case .equality:
+      return [
+        .oneOrTwoCharacter(.BANG_EQUAL),
+        .oneOrTwoCharacter(.EQUAL_EQUAL)
+      ]
+    case .comparison:
+      return [
+        .oneOrTwoCharacter(.GREATER),
+        .oneOrTwoCharacter(.GREATER_EQUAL),
+        .oneOrTwoCharacter(.LESS),
+        .oneOrTwoCharacter(.LESS_EQUAL)
+      ]
+    case .factor:
+      return [
+        .singleCharacter(.SLASH),
+        .singleCharacter(.STAR)
+      ]
+    case .term:
+      return [
+        .singleCharacter(.MINUS),
+        .singleCharacter(.PLUS)
+      ]
+    }
+  }
+}
+
+// MARK: - Parser
+
 final class Parser {
   private let tokens: [Token]
   private var currentIndex: Array.Index = 0
@@ -75,7 +132,7 @@ final class Parser {
 
   func parse() -> Expression? {
     do {
-      return try expression()
+      return try commaSeparatedExpressions()
     } catch is ParserError {
       print("unexpected error \(String(describing: error))")
       return nil
@@ -85,96 +142,65 @@ final class Parser {
     }
   }
 
-  private func expression() throws -> Expression {
-    try equality()
-  }
-
   // MARK: - Binary operator rules
 
-  // TODO: Create a helper method for parsing a left-associative series of binary operators
-  // given a list of token types, and an operand method handle to simplify this redundant code.
-
-  // matches an equality operator or anything of higher precedence
-  // binary operator rule
-  private func equality() throws -> Expression {
-    var expression = try comparison()
-
-    while match(
-      types: .oneOrTwoCharacter(.BANG_EQUAL),
-      .oneOrTwoCharacter(.EQUAL_EQUAL)
-    ) {
-      let `operator` = previous()
-      let right = try comparison()
-      expression = .binary(
-        Expression.Binary(
-          left: expression,
-          operator: `operator`,
-          right: right
-        )
-      )
-    }
-
-    return expression
+  private func commaSeparatedExpressions() throws -> Expression {
+    try processBinaryExpression(type: .comma)
   }
 
-  // binary operator rule
+  private func equality() throws -> Expression {
+    try processBinaryExpression(type: .equality)
+  }
+
   private func comparison() throws -> Expression {
-    var expression = try term()
-
-    while match(
-      types: .oneOrTwoCharacter(.GREATER),
-      .oneOrTwoCharacter(.GREATER_EQUAL),
-      .oneOrTwoCharacter(.LESS),
-      .oneOrTwoCharacter(.LESS_EQUAL)
-    ) {
-      let `operator` = previous()
-      let right = try term()
-      expression = .binary(
-        Expression.Binary(
-          left: expression,
-          operator: `operator`,
-          right: right
-        )
-      )
-    }
-
-    return expression
+    try processBinaryExpression(type: .comparison)
   }
 
   private func term() throws -> Expression {
-    var expression = try factor()
+    try processBinaryExpression(type: .term)
+  }
 
-    while match(types: .singleCharacter(.MINUS), .singleCharacter(.PLUS)) {
-      let `operator` = previous()
-      let right = try factor()
-      expression = .binary(
-        Expression.Binary(
-          left: expression,
-          operator: `operator`,
-          right: right
+  private func factor() throws -> Expression {
+    try processBinaryExpression(type: .factor)
+  }
+
+  private func processBinaryExpression(
+    type: BinaryExpression
+  ) throws -> Expression {
+    var expression = try nextExpression(for: type)
+
+    while match(types: type.tokenTypesToMatch) {
+      if type == .comma {
+        expression = try nextExpression(for: type)
+      } else {
+        let `operator` = previous()
+        let right = try nextExpression(for: type)
+        expression = .binary(
+          Expression.Binary(
+            left: expression,
+            operator: `operator`,
+            right: right
+          )
         )
-      )
+      }
     }
 
     return expression
   }
 
-  private func factor() throws -> Expression {
-    var expression = try unary()
-
-    while match(types: .singleCharacter(.SLASH), .singleCharacter(.STAR)) {
-      let `operator` = previous()
-      let right = try unary()
-      expression = .binary(
-        Expression.Binary(
-          left: expression,
-          operator: `operator`,
-          right: right
-        )
-      )
+  private func nextExpression(for binaryExpression: BinaryExpression) throws -> Expression {
+    switch binaryExpression {
+    case .comma:
+      try equality()
+    case .equality:
+      try comparison()
+    case .comparison:
+      try term()
+    case .term:
+      try factor()
+    case .factor:
+      try unary()
     }
-
-    return expression
   }
 
   // MARK: - Unary operator rules
@@ -208,7 +234,7 @@ final class Parser {
       return .literal(Expression.Literal(value: previous().literal?.description))
     }
     if match(types: .singleCharacter(.LEFT_PARENTHESIS)) {
-      let expression = try expression()
+      let expression = try commaSeparatedExpressions()
       try consume(
         type: .singleCharacter(.RIGHT_PARENTHESIS),
         message: "Expect ')' after expression."
@@ -224,18 +250,15 @@ final class Parser {
   // MARK: - Parser methods
 
   private func match(types: TokenType...) -> Bool {
+    match(types: types)
+  }
+
+  private func match(types: [TokenType]) -> Bool {
     if types.contains(where: check(type:)) {
       advance()
       return true
     }
     return false
-
-//    for type in types where check(type: type) {
-//      advance()
-//      return true
-//    }
-//
-//    return false
   }
 
   @discardableResult
