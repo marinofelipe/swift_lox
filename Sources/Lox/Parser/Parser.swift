@@ -187,7 +187,23 @@ final class Parser {
   private func processBinaryExpression(
     type: BinaryExpression
   ) throws -> Expression {
-    var expression = try nextExpression(for: type)
+    var expression: Expression
+    do {
+      expression = try nextExpression(for: type)
+    } catch {
+      switch error as? ParserError {
+      case .none:
+        throw error
+      case let .some(parserError):
+        switch parserError.kind {
+        case .regular:
+          throw error
+        case .binaryWithoutLeftHand:
+          advance() // move on, discarding the right-hand operand
+          return .invalid
+        }
+      }
+    }
 
     while match(types: type.tokenTypesToMatch) {
       if type == .comma {
@@ -227,6 +243,7 @@ final class Parser {
     }
   }
 
+  // TODO: Review associativity, should be RTL
   private func processTernary(expression: Expression) throws -> Expression {
     let leftExpression = Expression.binary(
       Expression.Binary(
@@ -287,6 +304,19 @@ final class Parser {
       )
     }
 
+    let allBinaryOperators = BinaryExpression.allCases
+      .map(\.tokenTypesToMatch)
+      .reduce([], +)
+    try allBinaryOperators.forEach { binaryOperator in
+      if check(type: binaryOperator) {
+        throw self.error(
+          token: peek(),
+          message: "Didn't find a left-hand operand",
+          kind: .binaryWithoutLeftHand
+        )
+      }
+    }
+
     throw error(token: peek(), message: "Expect expression.")
   }
 
@@ -339,9 +369,13 @@ final class Parser {
     tokens[currentIndex - 1]
   }
 
-  private func error(token: Token, message: String) -> ParserError {
+  private func error(
+    token: Token,
+    message: String,
+    kind: ParserError.Kind = .regular
+  ) -> ParserError {
     Lox.error(token: token, message: message)
-    return ParserError(tokens: [token])
+    return ParserError(tokens: [token], kind: kind)
   }
 
   private func synchronize() {
@@ -375,7 +409,21 @@ final class Parser {
 }
 
 struct ParserError: Error {
+  enum Kind: Equatable {
+    case regular
+    case binaryWithoutLeftHand
+  }
+
   let tokens: [Token]
+  let kind: Kind
+
+  init(
+    tokens: [Token],
+    kind: Kind = .regular
+  ) {
+    self.tokens = tokens
+    self.kind = kind
+  }
 }
 
 // another way to handle common syntax errors is with *error productions*

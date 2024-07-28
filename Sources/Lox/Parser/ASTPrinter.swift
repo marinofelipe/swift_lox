@@ -36,6 +36,8 @@ final class ASTPrinter {
         name: unary.operator.lexeme,
         expressions: unary.right
       )
+    case .invalid:
+      return "" // discarded
     }
   }
 

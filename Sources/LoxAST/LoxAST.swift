@@ -29,7 +29,8 @@ enum GenerateAST {
         "Binary   ; left: Expression, `operator`: Token, right: Expression",
         "Grouping ; expression: Expression",
         "Literal  ; value: String?",
-        "Unary    ; `operator`: Token, right: Expression"
+        "Unary    ; `operator`: Token, right: Expression",
+        "Invalid"
       ]
     )
   }
@@ -63,16 +64,20 @@ enum GenerateAST {
         let typeSplit = type.split(separator: ";")
 
         guard
-          typeSplit.count == 2,
-          let className = typeSplit.first.map(String.init),
-          let propertiesString = typeSplit.last.map(String.init)
+          typeSplit.count <= 2, // 1 for the invalid case
+          let className = typeSplit.first.map(String.init)
         else {
           return nil
         }
-        
-        let properties = propertiesString
+
+        let propertiesString = typeSplit.count == 2
+        ? typeSplit.last.map(String.init)
+        : nil
+
+        let properties = propertiesString?
           .split(separator: ",")
           .map(String.init)
+        ?? []
 
         return ClassAndProperties(
           className: className.replacingOccurrences(of: " ", with: ""),
@@ -114,10 +119,17 @@ enum GenerateAST {
     className: String,
     fields: [String]
   ) {
-    fileHandle.write(
-      "  case \(className.lowercased())(\(className))\n"
-        .data(using: .utf8)!
-    )
+    if fields.isEmpty {
+      fileHandle.write(
+        "  case \(className.lowercased())\n"
+          .data(using: .utf8)!
+      )
+    } else {
+      fileHandle.write(
+        "  case \(className.lowercased())(\(className))\n"
+          .data(using: .utf8)!
+      )
+    }
   }
 
   private static func defineType(
@@ -125,6 +137,8 @@ enum GenerateAST {
     className: String,
     fields: [String]
   ) {
+    guard !fields.isEmpty else { return }
+
     fileHandle.write(
       "  struct \(className): Equatable {\n"
         .data(using: .utf8)!
