@@ -93,7 +93,7 @@
 // From Lower to Higher precedence
 private enum BinaryExpression: CaseIterable {
   case comma // https://en.wikipedia.org/wiki/Comma_operator
-  case ternary
+  case ternary // not binary, here for now for simplicity
   case equality
   case comparison
   case term
