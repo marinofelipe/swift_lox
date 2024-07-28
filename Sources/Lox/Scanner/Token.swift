@@ -17,7 +17,9 @@ enum TokenType: Equatable, CustomStringConvertible {
          PLUS,
          SEMICOLON,
          SLASH,
-         STAR
+         STAR,
+         QUESTION_MARK,
+         COLON
   }
 
   enum OneOrTwoCharacter: String, Equatable {

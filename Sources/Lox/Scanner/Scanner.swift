@@ -77,6 +77,10 @@ final class Scanner {
       addToken(type: .singleCharacter(.SEMICOLON))
     case "*":
       addToken(type: .singleCharacter(.STAR))
+    case "?":
+      addToken(type: .singleCharacter(.QUESTION_MARK))
+    case ":":
+      addToken(type: .singleCharacter(.COLON))
     case "!":
       addToken(
         type: .oneOrTwoCharacter(

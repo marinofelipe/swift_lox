@@ -7,81 +7,93 @@
 
 // precedence lowest to highest
 
-//“The fact that the parser looks ahead at upcoming tokens to decide how to parse
-//puts recursive descent into the category of predictive parsers.”
+//  “The fact that the parser looks ahead at upcoming tokens to decide how to parse
+//  puts recursive descent into the category of predictive parsers.”
 
-//“A parser really has two jobs:
-//Given a valid sequence of tokens, produce a corresponding syntax tree.
-//Given an invalid sequence of tokens, detect any errors and tell the
-//user about their mistakes.”
+//  “A parser really has two jobs:
+//  Given a valid sequence of tokens, produce a corresponding syntax tree.
+//  Given an invalid sequence of tokens, detect any errors and tell the
+//  user about their mistakes.”
 
-//“Detect and report the error. If it doesn’t detect the error and passes the resulting malformed syntax tree on
-//to the interpreter, all manner of horrors may be summoned.
+//  “Detect and report the error. If it doesn’t detect the error and passes the resulting   malformed syntax tree on
+//  to the interpreter, all manner of horrors may be summoned.
 //
-//Philosophically speaking, if an error isn’t detected and the interpreter
-//runs the code, is it really an error?
-//
-//
-//Avoid crashing or hanging. Syntax errors are a fact of life, and
-//language tools have to be robust in the face of them. Segfaulting or getting
-//stuck in an infinite loop isn’t allowed. While the source may not be valid
-//code, it’s still a valid input to the parser because users use the
-//parser to learn what syntax is allowed.”
+//  Philosophically speaking, if an error isn’t detected and the interpreter
+//  runs the code, is it really an error?
 //
 //
-//“Those are the table stakes if you want to get in the parser game at all, but you
-//really want to raise the ante beyond that. A decent parser should:
+//  Avoid crashing or hanging. Syntax errors are a fact of life, and
+//  language tools have to be robust in the face of them. Segfaulting or getting
+//  stuck in an infinite loop isn’t allowed. While the source may not be valid
+//  code, it’s still a valid input to the parser because users use the
+//  parser to learn what syntax is allowed.”
 //
 //
-//Be fast. Computers are thousands of times faster than they were when
-//parser technology was first invented. The days of needing to optimize your
-//parser so that it could get through an entire source file during a coffee
-//break are over. But programmer expectations have risen as quickly, if not
-//faster. They expect their editors to reparse files in milliseconds after
-//every keystroke.
+//  “Those are the table stakes if you want to get in the parser game at all, but you
+//  really want to raise the ante beyond that. A decent parser should:
 //
 //
-//Report as many distinct errors as there are. Aborting after the first
-//error is easy to implement, but it’s annoying for users if every time they
-//fix what they think is the one error in a file, a new one appears. They
-//want to see them all.
+//  Be fast. Computers are thousands of times faster than they were when
+//  parser technology was first invented. The days of needing to optimize your
+//  parser so that it could get through an entire source file during a coffee
+//  break are over. But programmer expectations have risen as quickly, if not
+//  faster. They expect their editors to reparse files in milliseconds after
+//  every keystroke.
 //
 //
-//Minimize cascaded errors. Once a single error is found, the parser no
-//longer really knows what’s going on. It tries to get itself back on track
-//and keep going, but if it gets confused, it may report a slew of ghost
-//errors that don’t indicate other real problems in the code. When the first
-//error is fixed, those phantoms[…]”
+//  Report as many distinct errors as there are. Aborting after the first
+//  error is easy to implement, but it’s annoying for users if every time they
+//  fix what they think is the one error in a file, a new one appears. They
+//  want to see them all.
 //
-//Excerpt From
-//Crafting Interpreters
-//Robert Nystrom
-//https://books.apple.com/de/book/crafting-interpreters/id1578795812?l=en-GB
-//This material may be protected by copyright.
 //
-// Parser synchronization
-// Is the process of discarding tokens until a known good state is reached.
-// Errors on the discarded parsers won't be reported, which is a fair trade-off
+//  Minimize cascaded errors. Once a single error is found, the parser no
+//  longer really knows what’s going on. It tries to get itself back on track
+//  and keep going, but if it gets confused, it may report a slew of ghost
+//  errors that don’t indicate other real problems in the code. When the first
+//  error is fixed, those phantoms[…]”
 //
-// The traditional place in grammar to synchronize is between statements
+//  Excerpt From
+//  Crafting Interpreters
+//  Robert Nystrom
+//  https://books.apple.com/de/book/crafting-interpreters/id1578795812?l=en-GB
+//  This material may be protected by copyright.
+//
+//   Parser synchronization
+//   Is the process of discarding tokens until a known good state is reached.
+//   Errors on the discarded parsers won't be reported, which is a fair trade-off
+//
+//   The traditional place in grammar to synchronize is between statements
 
 
-// Grammar //
+//   Grammar //
 //
-//“It’s called “recursive descent” because it walks down the grammar”
+//  “It’s called “recursive descent” because it walks down the grammar”
 //
-//Excerpt From
-//Crafting Interpreters
-//Robert Nystrom
-//https://books.apple.com/de/book/crafting-interpreters/id1578795812?l=en-GB
-//This material may be protected by copyright.
-
+//  Excerpt From
+//  Crafting Interpreters
+//  Robert Nystrom
+//  https://books.apple.com/de/book/crafting-interpreters/id1578795812?l=en-GB
+//  This material may be protected by copyright.
 
 // MARK: - Grammar
+
+// expression     → comma;
+// comma          → ternary ( (",") ternary)*;
+// ternary        → equality ("?" expression : ":" expression)*;
+// equality       → comparison ( ( "!=" | "==" ) comparison )* ;
+// comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
+// term           → factor ( ( "-" | "+" ) factor )* ;
+// factor         → unary ( ( "/" | "*" ) unary )* ;
+// unary          → ( "!" | "-" ) unary
+//                | primary ;
+// primary        → NUMBER | STRING | "true" | "false" | "nil"
+//                | "(" expression ")" ;
 
 // From Lower to Higher precedence
 private enum BinaryExpression: CaseIterable {
   case comma // https://en.wikipedia.org/wiki/Comma_operator
+  case ternary
   case equality
   case comparison
   case term
@@ -93,6 +105,10 @@ private enum BinaryExpression: CaseIterable {
     case .comma:
       return [
         .singleCharacter(.COMMA)
+      ]
+    case .ternary:
+      return [
+        .singleCharacter(.QUESTION_MARK) // only the opening
       ]
     case .equality:
       return [
@@ -148,6 +164,10 @@ final class Parser {
     try processBinaryExpression(type: .comma)
   }
 
+  private func ternary() throws -> Expression {
+    try processBinaryExpression(type: .ternary)
+  }
+
   private func equality() throws -> Expression {
     try processBinaryExpression(type: .equality)
   }
@@ -172,6 +192,8 @@ final class Parser {
     while match(types: type.tokenTypesToMatch) {
       if type == .comma {
         expression = try nextExpression(for: type)
+      } else if type == .ternary {
+        return try processTernary(expression: expression)
       } else {
         let `operator` = previous()
         let right = try nextExpression(for: type)
@@ -191,6 +213,8 @@ final class Parser {
   private func nextExpression(for binaryExpression: BinaryExpression) throws -> Expression {
     switch binaryExpression {
     case .comma:
+      try ternary()
+    case .ternary:
       try equality()
     case .equality:
       try comparison()
@@ -201,6 +225,25 @@ final class Parser {
     case .factor:
       try unary()
     }
+  }
+
+  private func processTernary(expression: Expression) throws -> Expression {
+    let leftExpression = Expression.binary(
+      Expression.Binary(
+        left: expression,
+        operator: previous(),
+        right: try nextExpression(for: .ternary)
+      )
+    )
+    try consume(type: .singleCharacter(.COLON), message: "Expected ':' for ternary expression.")
+    let rightExpression = Expression.binary(
+      Expression.Binary(
+        left: leftExpression,
+        operator: previous(),
+        right: try nextExpression(for:  .ternary)
+      )
+    )
+    return rightExpression
   }
 
   // MARK: - Unary operator rules
