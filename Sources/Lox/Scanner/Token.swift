@@ -81,12 +81,16 @@ enum TokenType: Equatable, CustomStringConvertible {
   }
 }
 
+// TODO: See if it can be reused and replace LoxPlugin.LiteralValue
 enum LiteralType: Equatable, CustomStringConvertible {
-  case string(String)
+  case boolean(Bool)
   case number(Double)
+  case string(String)
 
   var description: String {
     switch self {
+    case let .boolean(value):
+      return value.description
     case let .number(value):
       return value.description
     case let .string(value):

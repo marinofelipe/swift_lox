@@ -26,10 +26,10 @@ enum GenerateAST {
       baseName: "Expression",
       types: [
         // Using my own notation/form with `;` so that `:` can be only used for the typed properties
-        "Binary   ; left: Expression, `operator`: Token, right: Expression",
+        "Binary   ; leftExpression: Expression, `operator`: Token, rightExpression: Expression",
         "Grouping ; expression: Expression",
-        "Literal  ; value: String?",
-        "Unary    ; `operator`: Token, right: Expression",
+        "Literal  ; value: LiteralValue?",
+        "Unary    ; `operator`: Token, rightExpression: Expression",
         "Invalid"
       ]
     )
@@ -109,6 +109,8 @@ enum GenerateAST {
 
       fileHandle.write("}\n".data(using: .utf8)!)
 
+      defineLiteralEnum(fileHandle: fileHandle)
+
       fileHandle.closeFile()
     }
   }
@@ -152,6 +154,20 @@ enum GenerateAST {
     fileHandle.write(
       "  }\n"
         .data(using: .utf8)!
+    )
+  }
+
+  private static func defineLiteralEnum(fileHandle: FileHandle) {
+    fileHandle.write(
+      """
+      
+      enum LiteralValue: Equatable {
+        case string(String)
+        case number(Double)
+        case boolean(Bool)
+      }
+      """
+      .data(using: .utf8)!
     )
   }
 }

@@ -22,7 +22,7 @@ final class ASTPrinter {
     case let .binary(binary):
       return parenthesize(
         name: binary.`operator`.lexeme,
-        expressions: binary.left, binary.right
+        expressions: binary.leftExpression, binary.rightExpression
       )
     case let .grouping(grouping):
       return parenthesize(
@@ -34,7 +34,7 @@ final class ASTPrinter {
     case let .unary(unary):
       return parenthesize(
         name: unary.operator.lexeme,
-        expressions: unary.right
+        expressions: unary.rightExpression
       )
     case .invalid:
       return "" // discarded

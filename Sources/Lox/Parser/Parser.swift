@@ -215,9 +215,9 @@ final class Parser {
         let right = try nextExpression(for: type)
         expression = .binary(
           Expression.Binary(
-            left: expression,
+            leftExpression: expression,
             operator: `operator`,
-            right: right
+            rightExpression: right
           )
         )
       }
@@ -247,17 +247,17 @@ final class Parser {
   private func processTernary(expression: Expression) throws -> Expression {
     let leftExpression = Expression.binary(
       Expression.Binary(
-        left: expression,
+        leftExpression: expression,
         operator: previous(),
-        right: try nextExpression(for: .ternary)
+        rightExpression: try nextExpression(for: .ternary)
       )
     )
     try consume(type: .singleCharacter(.COLON), message: "Expected ':' for ternary expression.")
     let rightExpression = Expression.binary(
       Expression.Binary(
-        left: leftExpression,
+        leftExpression: leftExpression,
         operator: previous(),
-        right: try nextExpression(for:  .ternary)
+        rightExpression: try nextExpression(for:  .ternary)
       )
     )
     return rightExpression
@@ -270,7 +270,7 @@ final class Parser {
       let `operator` = previous()
       let right = try unary()
       return .unary(
-        Expression.Unary(operator: `operator`, right: right)
+        Expression.Unary(operator: `operator`, rightExpression: right)
       )
     }
 
@@ -280,18 +280,22 @@ final class Parser {
   // highest precedence
   private func primary() throws -> Expression {
     if match(types: .keyword(.FALSE)) {
-      return .literal(Expression.Literal(value: "false"))
+      return .literal(Expression.Literal(value: .boolean(false)))
     }
     if match(types: .keyword(.TRUE)) {
-      return .literal(Expression.Literal(value: "true"))
+      return .literal(Expression.Literal(value: .boolean(true)))
     }
     if match(types: .keyword(.NIL)) {
-      return .literal(Expression.Literal(value: "nil"))
+      return .literal(Expression.Literal(value: .none))
     }
     if match(
       types: .literal(.NUMBER), .literal(.STRING)
     ) {
-      return .literal(Expression.Literal(value: previous().literal?.description))
+      if let previousLiteral = previous().literal {
+        return .literal(Expression.Literal(value: .init(from: previousLiteral)))
+      } else {
+        return .literal(Expression.Literal(value: .none))
+      }
     }
     if match(types: .singleCharacter(.LEFT_PARENTHESIS)) {
       let expression = try commaSeparatedExpressions()
@@ -423,6 +427,19 @@ struct ParserError: Error {
   ) {
     self.tokens = tokens
     self.kind = kind
+  }
+}
+
+extension LiteralValue {
+  init(from literal: LiteralType) {
+    switch literal {
+    case let .boolean(value):
+      self = .boolean(value)
+    case let .number(value):
+      self = .number(value)
+    case let .string(value):
+      self = .string(value)
+    }
   }
 }
 

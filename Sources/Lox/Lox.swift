@@ -8,7 +8,9 @@
 import Foundation
 
 public enum Lox {
+  private static let interpreter = Interpreter()
   private static var hadError = false
+  private static var hadRuntimeError = false
 
   public static func main(args: [String]) throws {
     if args.count > 1 {
@@ -27,6 +29,8 @@ public enum Lox {
 
     if hadError {
       exit(65)
+    } else if hadRuntimeError {
+      exit(70)
     }
   }
 
@@ -71,8 +75,12 @@ public enum Lox {
     // stop if there's syntax errors
     guard let expression, !hadError else { return }
 
+    #if DEBUG
     let astPrinter = ASTPrinter()
     astPrinter.print(expression)
+    #endif
+
+    interpreter.interpret(expression: expression)
   }
 
   static func error(line: Int = #line, message: String) {
@@ -94,5 +102,10 @@ public enum Lox {
       where: token.type == TokenType.EOF ? " at end" : " at '" + token.lexeme + "'",
       message: message
     )
+  }
+
+  static func runtimeError(_ error: RuntimeError) {
+    print("\(error.message)\n[line \(error.token.line)]", terminator: "\n")
+    hadRuntimeError = true
   }
 }
