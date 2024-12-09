@@ -7,17 +7,52 @@
 
 import Foundation
 
-protocol InterpreterVisitor {
-  associatedtype T
+extension Expression {
+  func accept(visitor: any ExpressionVisitor) throws -> LiteralValue? {
+    switch self {
+    case let .literal(literal):
+      visitor.visitLiteralExpression(literal)
+    case let .unary(unary):
+      try visitor.visitUnaryExpression(unary)
+    case let .grouping(grouping):
+      try visitor.visitGroupingExpression(grouping)
+    case let .binary(binary):
+      try visitor.visitBinaryExpression(binary)
+    case .invalid:
+      nil
+    }
+  }
+}
 
-  func visitLiteralExpression(_: Expression.Literal) -> T
-  func visitGroupingExpression(_: Expression.Grouping) -> T
-  func visitUnaryExpression(_: Expression.Unary) throws -> T?
-  func visitBinaryExpression(_: Expression.Binary) throws -> T?
+extension LiteralValue {
+  var double: Double? {
+    switch self {
+    case let .number(value):
+      return value
+    default:
+      return nil
+    }
+  }
+
+  var string: String? {
+    switch self {
+    case let .string(value):
+      return value
+    default:
+      return nil
+    }
+  }
+}
+
+protocol ExpressionVisitor {
+  func visitLiteralExpression(_: Expression.Literal) -> LiteralValue?
+  func visitGroupingExpression(_: Expression.Grouping) throws -> LiteralValue?
+  func visitUnaryExpression(_: Expression.Unary) throws -> LiteralValue?
+  func visitBinaryExpression(_: Expression.Binary) throws -> LiteralValue?
 }
 
 /// A **post-order traversal** interpreter. Each node evaluates its children before doing its own work.
-final class Interpreter: InterpreterVisitor {
+final class Interpreter: ExpressionVisitor { // Runtime, while Parser is compile-time
   func interpret(expression: Expression) {
     do {
       let value = try evaluate(expression: expression)
@@ -28,61 +63,54 @@ final class Interpreter: InterpreterVisitor {
     }
   }
 
-  func visitLiteralExpression(_ expression: Expression.Literal) -> Any {
-    expression.value as Any
+  func visitLiteralExpression(_ expression: Expression.Literal) -> LiteralValue? {
+    expression.value
   }
 
-  func visitUnaryExpression(_ expression: Expression.Unary) throws -> T? {
+  func visitUnaryExpression(_ expression: Expression.Unary) throws -> LiteralValue? {
     let rightExpression = try evaluate(expression: expression.rightExpression)
 
     switch expression.operator.type {
     case .oneOrTwoCharacter(.BANG):
-      return isTruthy(rightExpression)
+      return .boolean(isTruthy(rightExpression))
     case .singleCharacter(.MINUS):
-      return -(rightExpression as! Double)
+      switch rightExpression {
+      // is that as a dynamically typed lang? May need to runtime crash instead
+      case let .number(double):
+        return .number(double)
+      default:
+        // Error out?
+        return nil
+      }
     default:
       // Unreachable.
       return nil
     }
   }
 
-  private func checkNumberOperand(operator: Token, operand: AnyObject?) throws {
-    guard !(operand is Double) else { return }
-    throw RuntimeError(token: `operator`, message: "Operand must be a number.")
-  }
-
-  private func checkNumberOperands(
-    operator: Token,
-    left: AnyObject?,
-    right: AnyObject?
-  ) throws {
-    guard !(left is Double && right is Double) else { return }
-    throw RuntimeError(token: `operator`, message: "Both operands must be numbers.")
-  }
-
-  private func isTruthy(_ object: AnyObject?) -> Bool {
-    switch object {
-    case is Bool:
-      return object as? Bool == false
+  private func isTruthy(_ value: LiteralValue?) -> Bool {
+    switch value {
+    case let .boolean(boolValue):
+      boolValue
     case .none:
-      return false
+      false
     default:
-      return true
+      true // why, again?
     }
   }
 
-  private func isEqual(_ lhs: AnyObject?, rhs: AnyObject?) -> Bool {
+  private func isEqual(_ lhs: LiteralValue?, rhs: LiteralValue?) -> Bool {
     switch (lhs, rhs) {
     case (.none, .none):
-      return true
+      true
     case (.none, _), (_, .none):
-      return false
+      false
     case let (.some(lhsSome), .some(rhsSome)):
-      return lhsSome.isEqual(to: rhsSome)
+      lhsSome == rhsSome
     }
   }
 
-  private func stringify(_ object: AnyObject?) -> String {
+  private func stringify(_ object: Any?) -> String {
     switch object {
     case .none:
       return "nil"
@@ -104,101 +132,117 @@ final class Interpreter: InterpreterVisitor {
   //  parenthesized expression, they simply return the node for the inner expression.
   //  We do create a node for parentheses in Lox because we’ll need it later to
   //  correctly handle the left-hand sides of assignment expressions.”
-  func visitGroupingExpression(_ expression: Expression.Grouping) -> T {
-    expression.expression // expression contained inside the parenthesis
-    // return evaluate(expression.expression)
+  func visitGroupingExpression(_ expression: Expression.Grouping) throws -> LiteralValue? {
+    try evaluate(expression: expression.expression)
   }
 
-  private func evaluate(expression: Expression) throws -> AnyObject? {
-//    expression.accept(self)
-    fatalError("tbi")
+  private func evaluate(expression: Expression) throws -> LiteralValue? {
+    try expression.accept(visitor: self)
   }
 
-  func visitBinaryExpression(_ expression: Expression.Binary) throws -> T? {
+  func visitBinaryExpression(_ expression: Expression.Binary) throws -> LiteralValue? {
     let leftExpression = try evaluate(expression: expression.leftExpression)
     let rightExpression = try evaluate(expression: expression.rightExpression)
-
-    // lox is a dynamically typed language, so it will crash in runtime
-    // TODO: Evolve it to report a runtime error when the types doesn't match
-    let doubleLeft = leftExpression as! Double
-    let doubleRight = rightExpression as! Double
 
     switch expression.operator.type {
       // arithmetic operators - produce the operand value
     case .singleCharacter(.MINUS):
-      try checkNumberOperands(
-        operator: expression.operator,
-        left: leftExpression,
-        right: rightExpression
-      )
-      return doubleLeft - doubleRight
-    case .singleCharacter(.PLUS):
-      if
-        let leftDouble = leftExpression as? Double,
-          let rightDouble = rightExpression as? Double
-      {
-        return leftDouble + rightDouble
-      } else if
-        let leftString = leftExpression as? String,
-        let rightString = rightExpression as? String
-      {
-        return leftString + rightString
+      guard
+        let leftDouble = leftExpression?.double,
+        let rightDouble = rightExpression?.double
+      else {
+        throw RuntimeError(token: expression.operator, message: "Both operands must be numbers.")
       }
 
-      throw RuntimeError(
-        token: expression.operator,
-        message: "Operands must be two numbers or two strings."
-      )
+      return .number(leftDouble - rightDouble)
+    case .singleCharacter(.PLUS):
+      if
+        let leftDouble = leftExpression?.double,
+        let rightDouble = rightExpression?.double
+      {
+        return .number(leftDouble + rightDouble)
+      } else if
+        let leftString = leftExpression?.string,
+        let rightString = rightExpression?.string
+      {
+        return .string(leftString + rightString)
+      }
+
+      switch (leftExpression?.string, rightExpression?.string) {
+      case let (.some(leftValue), .some(rightValue)):
+        return .string(leftValue + rightValue)
+      case let (.some(leftValue), .none):
+        return .string(leftValue + "\(rightExpression?.string ?? "nil")")
+      case let (.none, .some(rightValue)):
+        return .string("\(leftExpression?.string ?? "nil")" + rightValue)
+      case (.none, .none):
+        throw RuntimeError(
+          token: expression.operator,
+          message: "Operands must be two numbers or two strings."
+        )
+      }
     case .singleCharacter(.SLASH):
-      try checkNumberOperands(
-        operator: expression.operator,
-        left: leftExpression,
-        right: rightExpression
-      )
-      return doubleLeft / doubleRight
+      guard
+        let leftDouble = leftExpression?.double,
+        let rightDouble = rightExpression?.double
+      else {
+        throw RuntimeError(token: expression.operator, message: "Both operands must be numbers.")
+      }
+
+      return .number(leftDouble / rightDouble)
     case .singleCharacter(.STAR):
-      try checkNumberOperands(
-        operator: expression.operator,
-        left: leftExpression,
-        right: rightExpression
-      )
-      return doubleLeft * doubleRight
+      guard
+        let leftDouble = leftExpression?.double,
+        let rightDouble = rightExpression?.double
+      else {
+        throw RuntimeError(token: expression.operator, message: "Both operands must be numbers.")
+      }
+
+      return .number(leftDouble * rightDouble)
 
     // comparison operators - produce Bool
     case .oneOrTwoCharacter(.GREATER):
-      try checkNumberOperands(
-        operator: expression.operator,
-        left: leftExpression,
-        right: rightExpression
-      )
-      return doubleLeft > doubleRight
+      guard
+        let leftDouble = leftExpression?.double,
+        let rightDouble = rightExpression?.double
+      else {
+        throw RuntimeError(token: expression.operator, message: "Both operands must be numbers.")
+      }
+
+      return .boolean(leftDouble > rightDouble)
     case .oneOrTwoCharacter(.GREATER_EQUAL):
-      try checkNumberOperands(
-        operator: expression.operator,
-        left: leftExpression,
-        right: rightExpression
-      )
-      return doubleLeft >= doubleRight
+      guard
+        let leftDouble = leftExpression?.double,
+        let rightDouble = rightExpression?.double
+      else {
+        throw RuntimeError(token: expression.operator, message: "Both operands must be numbers.")
+      }
+
+      return .boolean(leftDouble >= rightDouble)
     case .oneOrTwoCharacter(.LESS):
-      try checkNumberOperands(
-        operator: expression.operator,
-        left: leftExpression,
-        right: rightExpression
-      )
-      return doubleLeft < doubleRight
+      guard
+        let leftDouble = leftExpression?.double,
+        let rightDouble = rightExpression?.double
+      else {
+        throw RuntimeError(token: expression.operator, message: "Both operands must be numbers.")
+      }
+
+      return .boolean(leftDouble < rightDouble)
     case .oneOrTwoCharacter(.LESS_EQUAL):
-      try checkNumberOperands(
-        operator: expression.operator,
-        left: leftExpression,
-        right: rightExpression
-      )
-      return doubleLeft <= doubleRight
+      guard
+        let leftDouble = leftExpression?.double,
+        let rightDouble = rightExpression?.double
+      else {
+        throw RuntimeError(token: expression.operator, message: "Both operands must be numbers.")
+      }
+
+      return .boolean(leftDouble <= rightDouble)
 
     // equality operators - produce Bool
     case .oneOrTwoCharacter(.BANG_EQUAL):
-      return !isEqual(leftExpression, rhs: rightExpression)
+      return .boolean(!isEqual(leftExpression, rhs: rightExpression))
     case .oneOrTwoCharacter(.EQUAL_EQUAL):
-      return isEqual(leftExpression, rhs: rightExpression)
+      return .boolean(isEqual(leftExpression, rhs: rightExpression))
     default:
       // Unreachable.
       return nil
