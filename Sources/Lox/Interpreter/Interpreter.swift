@@ -122,7 +122,7 @@ final class Interpreter: ExpressionVisitor { // Runtime, while Parser is compile
       case (.none, .none):
         throw RuntimeError(
           token: expression.operator,
-          message: "Operands must be two numbers or two strings."
+          message: "Operands must be two numbers, two strings or convertible to string."
         )
       }
     case .singleCharacter(.SLASH):
@@ -131,6 +131,10 @@ final class Interpreter: ExpressionVisitor { // Runtime, while Parser is compile
         let rightDouble = rightExpression?.double
       else {
         throw RuntimeError(token: expression.operator, message: "Both operands must be numbers.")
+      }
+
+      guard !rightDouble.isZero else {
+        throw RuntimeError(token: expression.operator, message: "Attempted to divide by zero")
       }
 
       return .number(leftDouble / rightDouble)
