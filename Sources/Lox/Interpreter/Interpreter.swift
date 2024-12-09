@@ -7,6 +7,15 @@
 
 import Foundation
 
+// MARK: - Visitor
+
+protocol ExpressionVisitor {
+  func visitLiteralExpression(_: Expression.Literal) -> LiteralValue?
+  func visitGroupingExpression(_: Expression.Grouping) throws -> LiteralValue?
+  func visitUnaryExpression(_: Expression.Unary) throws -> LiteralValue?
+  func visitBinaryExpression(_: Expression.Binary) throws -> LiteralValue?
+}
+
 extension Expression {
   func accept(visitor: any ExpressionVisitor) throws -> LiteralValue? {
     switch self {
@@ -24,39 +33,14 @@ extension Expression {
   }
 }
 
-extension LiteralValue {
-  var double: Double? {
-    switch self {
-    case let .number(value):
-      return value
-    default:
-      return nil
-    }
-  }
-
-  var string: String? {
-    switch self {
-    case let .string(value):
-      return value
-    default:
-      return nil
-    }
-  }
-}
-
-protocol ExpressionVisitor {
-  func visitLiteralExpression(_: Expression.Literal) -> LiteralValue?
-  func visitGroupingExpression(_: Expression.Grouping) throws -> LiteralValue?
-  func visitUnaryExpression(_: Expression.Unary) throws -> LiteralValue?
-  func visitBinaryExpression(_: Expression.Binary) throws -> LiteralValue?
-}
+// MARK: - Interpreter
 
 /// A **post-order traversal** interpreter. Each node evaluates its children before doing its own work.
 final class Interpreter: ExpressionVisitor { // Runtime, while Parser is compile-time
   func interpret(expression: Expression) {
     do {
       let value = try evaluate(expression: expression)
-      print(stringify(value))
+      print(value.stringified)
     } catch {
       guard let runtimeError = error as? RuntimeError else { return } // should it be handled?
       Lox.runtimeError(runtimeError)
@@ -72,7 +56,7 @@ final class Interpreter: ExpressionVisitor { // Runtime, while Parser is compile
 
     switch expression.operator.type {
     case .oneOrTwoCharacter(.BANG):
-      return .boolean(isTruthy(rightExpression))
+      return rightExpression.isTruthy
     case .singleCharacter(.MINUS):
       switch rightExpression {
       // is that as a dynamically typed lang? May need to runtime crash instead
@@ -85,46 +69,6 @@ final class Interpreter: ExpressionVisitor { // Runtime, while Parser is compile
     default:
       // Unreachable.
       return nil
-    }
-  }
-
-  private func isTruthy(_ value: LiteralValue?) -> Bool {
-    switch value {
-    case let .boolean(boolValue):
-      boolValue
-    case .none:
-      false
-    default:
-      true // why, again?
-    }
-  }
-
-  private func isEqual(_ lhs: LiteralValue?, rhs: LiteralValue?) -> Bool {
-    switch (lhs, rhs) {
-    case (.none, .none):
-      true
-    case (.none, _), (_, .none):
-      false
-    case let (.some(lhsSome), .some(rhsSome)):
-      lhsSome == rhsSome
-    }
-  }
-
-  private func stringify(_ object: Any?) -> String {
-    switch object {
-    case .none:
-      return "nil"
-    case let .some(value):
-      switch value {
-      case is Double:
-        let stringValue = "\(value)"
-        if stringValue.hasSuffix(".0") {
-          return String(stringValue.dropLast(2))
-        }
-        return stringValue
-      default:
-        return "\(value)"
-      }
     }
   }
 
@@ -240,11 +184,75 @@ final class Interpreter: ExpressionVisitor { // Runtime, while Parser is compile
 
     // equality operators - produce Bool
     case .oneOrTwoCharacter(.BANG_EQUAL):
-      return .boolean(!isEqual(leftExpression, rhs: rightExpression))
+      return leftExpression.isEqual(to: rightExpression, not: true)
     case .oneOrTwoCharacter(.EQUAL_EQUAL):
-      return .boolean(isEqual(leftExpression, rhs: rightExpression))
+      return leftExpression.isEqual(to: rightExpression)
     default:
       // Unreachable.
+      return nil
+    }
+  }
+}
+
+// MARK: - LiteralValue helpers
+
+private extension Optional where Wrapped == LiteralValue {
+  var isTruthy: LiteralValue {
+    switch self {
+    case let .boolean(boolValue):
+      .boolean(boolValue)
+    case .none:
+      .boolean(false)
+    default:
+      .boolean(true) // why, again?
+    }
+  }
+
+  var stringified: String {
+    switch self {
+    case .none:
+      return "nil"
+    case let .some(value):
+      switch value {
+      case let .number(value):
+        let stringValue = "\(value)"
+        if stringValue.hasSuffix(".0") {
+          return String(stringValue.dropLast(2))
+        }
+        return stringValue
+      default:
+        return "\(value)"
+      }
+    }
+  }
+
+  func isEqual(to other: Self, not: Bool = false) -> LiteralValue {
+    switch (self, other) {
+    case (.none, .none):
+      .boolean(not ? false : true)
+    case (.none, _), (_, .none):
+      .boolean(not ? true : false)
+    case let (.some(lhsSome), .some(rhsSome)):
+      .boolean(not ? lhsSome != rhsSome : lhsSome == rhsSome)
+    }
+  }
+}
+
+private extension LiteralValue {
+  var double: Double? {
+    switch self {
+    case let .number(value):
+      return value
+    default:
+      return nil
+    }
+  }
+
+  var string: String? {
+    switch self {
+    case let .string(value):
+      return value
+    default:
       return nil
     }
   }
