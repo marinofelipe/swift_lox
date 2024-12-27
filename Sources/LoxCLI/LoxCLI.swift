@@ -35,7 +35,7 @@ public struct LoxCLI: ParsableCommand {
   }
 }
 
-extension URL: ExpressibleByArgument {
+extension URL: @retroactive ExpressibleByArgument {
   public init?(argument: String) {
     self.init(string: argument)
   }
