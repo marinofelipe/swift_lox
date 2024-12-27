@@ -7,36 +7,8 @@
 
 import Foundation
 
-// MARK: - Visitor
-
-protocol ExpressionVisitor {
-  func visitLiteralExpression(_: Expression.Literal) -> LiteralValue?
-  func visitGroupingExpression(_: Expression.Grouping) throws -> LiteralValue?
-  func visitUnaryExpression(_: Expression.Unary) throws -> LiteralValue?
-  func visitBinaryExpression(_: Expression.Binary) throws -> LiteralValue?
-}
-
-extension Expression {
-  func accept(visitor: any ExpressionVisitor) throws -> LiteralValue? {
-    switch self {
-    case let .literal(literal):
-      visitor.visitLiteralExpression(literal)
-    case let .unary(unary):
-      try visitor.visitUnaryExpression(unary)
-    case let .grouping(grouping):
-      try visitor.visitGroupingExpression(grouping)
-    case let .binary(binary):
-      try visitor.visitBinaryExpression(binary)
-    case .invalid:
-      nil
-    }
-  }
-}
-
-// MARK: - Interpreter
-
 /// A **post-order traversal** interpreter. Each node evaluates its children before doing its own work.
-final class Interpreter: ExpressionVisitor { // Runtime, while Parser is compile-time
+final class Interpreter: Expression.Visitor { // Runtime, while Parser is compile-time
   func interpret(expression: Expression) {
     do {
       let value = try evaluate(expression: expression)
@@ -58,6 +30,7 @@ final class Interpreter: ExpressionVisitor { // Runtime, while Parser is compile
     case .oneOrTwoCharacter(.BANG):
       return rightExpression.isTruthy
     case .singleCharacter(.MINUS):
+
       switch rightExpression {
       // is that as a dynamically typed lang? May need to runtime crash instead
       case let .number(double):

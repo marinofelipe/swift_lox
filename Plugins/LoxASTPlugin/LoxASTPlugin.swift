@@ -23,7 +23,8 @@ struct LoxASTPlugin: BuildToolPlugin {
           context.pluginWorkDirectory
         ],
         outputFiles: [
-          context.pluginWorkDirectory.appending("Expression.swift")
+          context.pluginWorkDirectory.appending("Expression.swift"),
+          context.pluginWorkDirectory.appending("Statement.swift")
         ]
       )
     ]

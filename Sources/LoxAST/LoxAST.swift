@@ -20,10 +20,20 @@ struct LoxAST: ParsableCommand {
 }
 
 enum GenerateAST {
+  enum ASTType: String {
+    case expression = "Expression"
+    case statement = "Statement"
+  }
+
   public static func main(outputDir: String) throws {
+    try defineExpressionAST(outputDir: outputDir)
+    try defineStatementAST(outputDir: outputDir)
+  }
+
+  private static func defineExpressionAST(outputDir: String) throws {
     try defineAST(
+      for: .expression,
       outputDir: outputDir,
-      baseName: "Expression",
       types: [
         // Using my own notation/form with `;` so that `:` can be only used for the typed properties
         "Binary   ; leftExpression: Expression, `operator`: Token, rightExpression: Expression",
@@ -35,11 +45,24 @@ enum GenerateAST {
     )
   }
 
+  private static func defineStatementAST(outputDir: String) throws {
+    try defineAST(
+      for: .statement,
+      outputDir: outputDir,
+      types: [
+        // Using my own notation/form with `;` so that `:` can be only used for the typed properties
+        "Expr   ; expression: Expression",
+        "Print ; expression: Expression",
+      ]
+    )
+  }
+
   private static func defineAST(
+    for astType: ASTType,
     outputDir: String,
-    baseName: String,
     types: [String]
   ) throws {
+    let baseName = astType.rawValue
     let fileURL = try AbsolutePath(validating: outputDir)
       .appending(component: "\(baseName).swift")
 
@@ -51,7 +74,9 @@ enum GenerateAST {
       try fileHandle.truncate(atOffset: 0) // clear before proceeding
 
       fileHandle.write("import Foundation\n\n".data(using: .utf8)!)
-      fileHandle.write("indirect enum \(baseName): Equatable {\n".data(using: .utf8)!)
+
+      let enumType = astType == .expression ? "indirect " : ""
+      fileHandle.write("\(enumType)enum \(baseName): Equatable {\n".data(using: .utf8)!)
 
       fileHandle.write("  // The AST cases.\n".data(using: .utf8)!)
 
@@ -109,7 +134,9 @@ enum GenerateAST {
 
       fileHandle.write("}\n".data(using: .utf8)!)
 
-      defineLiteralEnum(fileHandle: fileHandle)
+      if astType == .expression {
+        defineLiteralEnum(fileHandle: fileHandle)
+      }
 
       fileHandle.closeFile()
     }
