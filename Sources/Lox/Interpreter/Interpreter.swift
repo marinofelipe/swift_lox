@@ -7,6 +7,20 @@
 
 import Foundation
 
+//“Code like this is weird, so C, Java, and friends all disallow it. It’s as if
+//there are two levels of “precedence” for statements.
+//Some places where a statement is allowed—like inside a block or at the top
+//level—allow any kind of statement, including declarations. Others allow only
+//the “higher” precedence statements that don’t declare names.”
+
+//Program        → declaration* EOF ;
+//
+//declaration    → varDecl
+//               | statement ;
+//
+//statement      → exprStmt
+//               | printStmt ;”
+
 /// A **post-order traversal** interpreter. Each node evaluates its children before doing its own work.
 final class Interpreter { // Runtime, while Parser is compile-time
   func interpret(statements: [Statement]) {

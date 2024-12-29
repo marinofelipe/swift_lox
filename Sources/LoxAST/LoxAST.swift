@@ -40,6 +40,7 @@ enum GenerateAST {
         "Grouping ; expression: Expression",
         "Literal  ; value: LiteralValue?",
         "Unary    ; `operator`: Token, rightExpression: Expression",
+        "Variable ; name: Token",
         "Invalid"
       ]
     )
@@ -53,6 +54,7 @@ enum GenerateAST {
         // Using my own notation/form with `;` so that `:` can be only used for the typed properties
         "Expr   ; expression: Expression",
         "Print ; expression: Expression",
+        "Var ; name: Token, initializer: Expression?",
       ]
     )
   }
@@ -148,14 +150,17 @@ enum GenerateAST {
     className: String,
     fields: [String]
   ) {
+    let normalizedClassName = className.isReservedKeyword ? "`\(className)`" : className
+    let caseName = normalizedClassName.lowercased()
+
     if fields.isEmpty {
       fileHandle.write(
-        "  case \(className.lowercased())\n"
+        "  case \(caseName)\n"
           .data(using: .utf8)!
       )
     } else {
       fileHandle.write(
-        "  case \(className.lowercased())(\(className))\n"
+        "  case \(caseName)(\(className))\n"
           .data(using: .utf8)!
       )
     }
@@ -196,5 +201,11 @@ enum GenerateAST {
       """
       .data(using: .utf8)!
     )
+  }
+}
+
+private extension String {
+  var isReservedKeyword: Bool {
+    self.lowercased() == "var" // only one needed for now
   }
 }

@@ -23,7 +23,7 @@ extension Expression {
       try visitor.visitGroupingExpression(grouping)
     case let .binary(binary):
       try visitor.visitBinaryExpression(binary)
-    case .invalid:
+    case .invalid, .variable: // FIXME: implement variable case
       nil
     }
   }

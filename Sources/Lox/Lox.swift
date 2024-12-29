@@ -76,10 +76,10 @@ public enum Lox {
     guard !statements.isEmpty, !hadError else { return }
 
     #if DEBUG
-    let astPrinter = ASTPrinter()
-    statements.forEach { statement in
-      astPrinter.print(statement.expression)
-    }
+//    let astPrinter = ASTPrinter()
+//    statements.forEach { statement in
+//      astPrinter.print(statement.expression)
+//    }
     #endif
 
     interpreter.interpret(statements: statements)
@@ -119,6 +119,9 @@ private extension Statement {
       return expressionStatement.expression
     case let .print(printStatement):
       return printStatement.expression
+    case let .var(varExpression):
+//      return varExpression.initializer
+      fatalError("tbi")
     }
   }
 }

@@ -17,6 +17,8 @@ extension Statement {
       try visitor.visitExpressionStatement(expression)
     case let .print(printExpression):
       try visitor.visitPrintStatement(printExpression)
+    case let .var(varExpression):
+      fatalError("tbi")
     }
   }
 }
