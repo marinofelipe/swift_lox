@@ -99,9 +99,9 @@ extension Interpreter: Expression.Visitor {
       case let (.some(leftValue), .some(rightValue)):
         return .string(leftValue + rightValue)
       case let (.some(leftValue), .none):
-        return .string(leftValue + "\(rightExpression?.string ?? "nil")")
+        return .string(leftValue + rightExpression.stringified)
       case let (.none, .some(rightValue)):
-        return .string("\(leftExpression?.string ?? "nil")" + rightValue)
+        return .string(leftExpression.stringified + rightValue)
       case (.none, .none):
         throw RuntimeError(
           token: expression.operator,
@@ -208,24 +208,6 @@ private extension Optional where Wrapped == LiteralValue {
     }
   }
 
-  var stringified: String {
-    switch self {
-    case .none:
-      return "nil"
-    case let .some(value):
-      switch value {
-      case let .number(value):
-        let stringValue = "\(value)"
-        if stringValue.hasSuffix(".0") {
-          return String(stringValue.dropLast(2))
-        }
-        return stringValue
-      default:
-        return "\(value)"
-      }
-    }
-  }
-
   func isEqual(to other: Self, not: Bool = false) -> LiteralValue {
     switch (self, other) {
     case (.none, .none):
@@ -234,26 +216,6 @@ private extension Optional where Wrapped == LiteralValue {
       .boolean(not ? true : false)
     case let (.some(lhsSome), .some(rhsSome)):
       .boolean(not ? lhsSome != rhsSome : lhsSome == rhsSome)
-    }
-  }
-}
-
-private extension LiteralValue {
-  var double: Double? {
-    switch self {
-    case let .number(value):
-      return value
-    default:
-      return nil
-    }
-  }
-
-  var string: String? {
-    switch self {
-    case let .string(value):
-      return value
-    default:
-      return nil
     }
   }
 }
