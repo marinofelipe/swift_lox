@@ -70,17 +70,19 @@ public enum Lox {
     print("\n")
 
     let parser = Parser(tokens: tokens)
-    let expression = parser.parse()
+    let statements = parser.parse()
 
-    // stop if there's syntax errors
-    guard let expression, !hadError else { return }
+    // stop if there are syntax errors
+    guard !statements.isEmpty, !hadError else { return }
 
     #if DEBUG
     let astPrinter = ASTPrinter()
-    astPrinter.print(expression)
+    statements.forEach { statement in
+      astPrinter.print(statement.expression)
+    }
     #endif
 
-    interpreter.interpret(expression: expression)
+    interpreter.interpret(statements: statements)
   }
 
   static func error(line: Int = #line, message: String) {
@@ -107,5 +109,16 @@ public enum Lox {
   static func runtimeError(_ error: RuntimeError) {
     print("\(error.message)\n[line \(error.token.line)]", terminator: "\n")
     hadRuntimeError = true
+  }
+}
+
+private extension Statement {
+  var expression: Expression {
+    switch self {
+    case let .expr(expressionStatement):
+      return expressionStatement.expression
+    case let .print(printStatement):
+      return printStatement.expression
+    }
   }
 }

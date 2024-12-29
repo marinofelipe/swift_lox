@@ -8,17 +8,31 @@
 import Foundation
 
 /// A **post-order traversal** interpreter. Each node evaluates its children before doing its own work.
-final class Interpreter: Expression.Visitor { // Runtime, while Parser is compile-time
-  func interpret(expression: Expression) {
+final class Interpreter { // Runtime, while Parser is compile-time
+  func interpret(statements: [Statement]) {
     do {
-      let value = try evaluate(expression: expression)
-      print(value.stringified)
+      try statements.forEach(execute(statement:))
     } catch {
       guard let runtimeError = error as? RuntimeError else { return } // should it be handled?
       Lox.runtimeError(runtimeError)
     }
   }
+}
 
+private extension Interpreter {
+  @discardableResult
+  func evaluate(expression: Expression) throws -> LiteralValue? {
+    try expression.accept(visitor: self)
+  }
+
+  func execute(statement: Statement) throws {
+    try statement.accept(visitor: self)
+  }
+}
+
+// MARK: - Expression.Visitor
+
+extension Interpreter: Expression.Visitor {
   func visitLiteralExpression(_ expression: Expression.Literal) -> LiteralValue? {
     expression.value
   }
@@ -51,10 +65,6 @@ final class Interpreter: Expression.Visitor { // Runtime, while Parser is compil
   //  correctly handle the left-hand sides of assignment expressions.”
   func visitGroupingExpression(_ expression: Expression.Grouping) throws -> LiteralValue? {
     try evaluate(expression: expression.expression)
-  }
-
-  private func evaluate(expression: Expression) throws -> LiteralValue? {
-    try expression.accept(visitor: self)
   }
 
   func visitBinaryExpression(_ expression: Expression.Binary) throws -> LiteralValue? {
@@ -168,6 +178,19 @@ final class Interpreter: Expression.Visitor { // Runtime, while Parser is compil
       // Unreachable.
       return nil
     }
+  }
+}
+
+// MARK: - Statement.Visitor
+
+extension Interpreter: Statement.Visitor {
+  func visitExpressionStatement(_ statement: Statement.Expr) throws {
+    try evaluate(expression: statement.expression)
+  }
+  
+  func visitPrintStatement(_ statement: Statement.Print) throws {
+    let value = try evaluate(expression: statement.expression)
+    print(value.stringified)
   }
 }
 

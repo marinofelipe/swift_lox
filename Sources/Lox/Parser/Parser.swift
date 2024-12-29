@@ -146,45 +146,65 @@ final class Parser {
     self.tokens = tokens
   }
 
-  func parse() -> Expression? {
+  func parse() -> [Statement] {
+    var statements = [Statement]()
+
+    // recursive descent
     do {
-      return try commaSeparatedExpressions()
+      while !isAtEnd() {
+        statements.append(try statement())
+      }
     } catch is ParserError {
       print("unexpected error \(String(describing: error))")
-      return nil
+      return []
     } catch {
       print("unexpected error \(error)")
-      return nil
+      return []
     }
+
+    return statements
+
+//        do {
+//          return try commaSeparatedExpressions()
+//        } catch is ParserError {
+//          print("unexpected error \(String(describing: error))")
+//          return nil
+//        } catch {
+//          print("unexpected error \(error)")
+//          return nil
+//        }
   }
+}
 
-  // MARK: - Binary operator rules
+// MARK: - Expressions
 
-  private func commaSeparatedExpressions() throws -> Expression {
+private extension Parser {
+  // MARK: Binary operator rules
+  func commaSeparatedExpressions() throws -> Expression {
     try processBinaryExpression(type: .comma)
   }
 
-  private func ternary() throws -> Expression {
+  func ternary() throws -> Expression {
     try processBinaryExpression(type: .ternary)
   }
 
-  private func equality() throws -> Expression {
+  func equality() throws -> Expression {
     try processBinaryExpression(type: .equality)
   }
 
-  private func comparison() throws -> Expression {
+  func comparison() throws -> Expression {
     try processBinaryExpression(type: .comparison)
   }
 
-  private func term() throws -> Expression {
+  func term() throws -> Expression {
     try processBinaryExpression(type: .term)
   }
 
-  private func factor() throws -> Expression {
+  func factor() throws -> Expression {
     try processBinaryExpression(type: .factor)
   }
 
-  private func processBinaryExpression(
+  func processBinaryExpression(
     type: BinaryExpression
   ) throws -> Expression {
     var expression: Expression
@@ -226,7 +246,7 @@ final class Parser {
     return expression
   }
 
-  private func nextExpression(for binaryExpression: BinaryExpression) throws -> Expression {
+  func nextExpression(for binaryExpression: BinaryExpression) throws -> Expression {
     switch binaryExpression {
     case .comma:
       try ternary()
@@ -244,7 +264,7 @@ final class Parser {
   }
 
   // TODO: Review associativity, should be RTL
-  private func processTernary(expression: Expression) throws -> Expression {
+  func processTernary(expression: Expression) throws -> Expression {
     let leftExpression = Expression.binary(
       Expression.Binary(
         leftExpression: expression,
@@ -263,9 +283,8 @@ final class Parser {
     return rightExpression
   }
 
-  // MARK: - Unary operator rules
-
-  private func unary() throws -> Expression {
+  // MARK: Unary operator rules
+  func unary() throws -> Expression {
     while match(types: .oneOrTwoCharacter(.BANG), .singleCharacter(.MINUS)) {
       let `operator` = previous()
       let right = try unary()
@@ -278,7 +297,7 @@ final class Parser {
   }
 
   // highest precedence
-  private func primary() throws -> Expression {
+  func primary() throws -> Expression {
     if match(types: .keyword(.FALSE)) {
       return .literal(Expression.Literal(value: .boolean(false)))
     }
@@ -323,14 +342,42 @@ final class Parser {
 
     throw error(token: peek(), message: "Expect expression.")
   }
+}
 
-  // MARK: - Parser methods
+// MARK: - Statements
 
-  private func match(types: TokenType...) -> Bool {
+private extension Parser {
+  func statement() throws -> Statement {
+    if match(types: .keyword(.PRINT)) {
+      return try printStatement()
+    }
+
+    return try expressionStatement()
+  }
+
+  func printStatement() throws -> Statement {
+    let value = try commaSeparatedExpressions()
+    try consume(type: .singleCharacter(.SEMICOLON), message: "Expect ';' after value.")
+
+    return .print(Statement.Print(expression: value))
+  }
+
+  func expressionStatement() throws -> Statement {
+    let value = try commaSeparatedExpressions()
+    try consume(type: .singleCharacter(.SEMICOLON), message: "Expect ';' after expression.")
+
+    return .expr(Statement.Expr(expression: value))
+  }
+}
+
+// MARK: - Parser methods
+
+private extension Parser {
+  func match(types: TokenType...) -> Bool {
     match(types: types)
   }
 
-  private func match(types: [TokenType]) -> Bool {
+  func match(types: [TokenType]) -> Bool {
     if types.contains(where: check(type:)) {
       advance()
       return true
@@ -339,7 +386,7 @@ final class Parser {
   }
 
   @discardableResult
-  private func consume(
+  func consume(
     type: TokenType,
     message: String
   ) throws -> Token {
@@ -348,32 +395,32 @@ final class Parser {
     throw error(token: peek(), message: message)
   }
 
-  private func check(type: TokenType) -> Bool {
+  func check(type: TokenType) -> Bool {
     guard !isAtEnd() else { return false }
 
     return peek().type == type
   }
 
   @discardableResult
-  private func advance() -> Token{
+  func advance() -> Token{
     if !isAtEnd() { currentIndex += 1 }
 
     return previous()
   }
 
-  private func isAtEnd() -> Bool {
+  func isAtEnd() -> Bool {
     peek().type == TokenType.EOF
   }
 
-  private func peek() -> Token {
+  func peek() -> Token {
     tokens[currentIndex]
   }
 
-  private func previous() -> Token {
+  func previous() -> Token {
     tokens[currentIndex - 1]
   }
 
-  private func error(
+  func error(
     token: Token,
     message: String,
     kind: ParserError.Kind = .regular
@@ -382,7 +429,7 @@ final class Parser {
     return ParserError(tokens: [token], kind: kind)
   }
 
-  private func synchronize() {
+  func synchronize() {
     advance()
 
     while !isAtEnd() {
@@ -411,6 +458,8 @@ final class Parser {
     }
   }
 }
+
+// MARK: - Types and extensions
 
 struct ParserError: Error {
   enum Kind: Equatable {
