@@ -152,7 +152,9 @@ final class Parser {
     // recursive descent
     do {
       while !isAtEnd() {
-        statements.append(try statement())
+        if let declaration = try declaration() {
+          statements.append(declaration)
+        }
       }
     } catch is ParserError {
       print("unexpected error \(String(describing: error))")
@@ -163,16 +165,6 @@ final class Parser {
     }
 
     return statements
-
-//        do {
-//          return try commaSeparatedExpressions()
-//        } catch is ParserError {
-//          print("unexpected error \(String(describing: error))")
-//          return nil
-//        } catch {
-//          print("unexpected error \(error)")
-//          return nil
-//        }
   }
 }
 
@@ -316,6 +308,9 @@ private extension Parser {
         return .literal(Expression.Literal(value: .none))
       }
     }
+    if match(types: .literal(.IDENTIFIER)) {
+      return .variable(Expression.Variable(name: previous()))
+    }
     if match(types: .singleCharacter(.LEFT_PARENTHESIS)) {
       let expression = try commaSeparatedExpressions()
       try consume(
@@ -347,12 +342,41 @@ private extension Parser {
 // MARK: - Statements
 
 private extension Parser {
+  func declaration() throws -> Statement? {
+    do {
+      if match(types: .keyword(.VAR)) {
+        return try varDeclaration()
+      }
+      
+      return try statement()
+    } catch {
+      synchronize()
+      return nil
+    }
+  }
+
   func statement() throws -> Statement {
     if match(types: .keyword(.PRINT)) {
       return try printStatement()
     }
 
     return try expressionStatement()
+  }
+
+  func varDeclaration() throws -> Statement {
+    let name = try consume(type: .literal(.IDENTIFIER), message: "Expect variable name.")
+
+    var initializer: Expression?
+    if match(types: .oneOrTwoCharacter(.EQUAL)) {
+      initializer = try commaSeparatedExpressions()
+    }
+
+    try consume(
+      type: .singleCharacter(.SEMICOLON),
+      message: "Expect ';' after variable declaration."
+    )
+
+    return .var(Statement.Var(name: name, initializer: initializer))
   }
 
   func printStatement() throws -> Statement {
@@ -496,9 +520,15 @@ extension LiteralValue {
 // “You augment the grammar with a rule that successfully matches the erroneous
 // syntax. The parser safely parses it but then reports it as an error instead of
 // producing a syntax tree.
-
+//
 // “Error productions work well because you, the parser author, know how the code
 // is wrong and what the user was likely trying to do. That means you can give a
 // more helpful message to get the user back on track, like, “Unary ‘+’ expressions
 // are not supported.” Mature parsers tend to accumulate error productions like
 // barnacles since they help users fix common mistakes.
+//
+//  Excerpt From
+//  Crafting Interpreters
+//  Robert Nystrom
+//  https://books.apple.com/de/book/crafting-interpreters/id1578795812?l=en-GB
+//  This material may be protected by copyright.

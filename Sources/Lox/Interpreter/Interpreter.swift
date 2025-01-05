@@ -12,7 +12,7 @@ import Foundation
 //Some places where a statement is allowed—like inside a block or at the top
 //level—allow any kind of statement, including declarations. Others allow only
 //the “higher” precedence statements that don’t declare names.”
-
+//
 //Program        → declaration* EOF ;
 //
 //declaration    → varDecl
@@ -20,9 +20,21 @@ import Foundation
 //
 //statement      → exprStmt
 //               | printStmt ;”
+//
+//  Excerpt From
+//  Crafting Interpreters
+//  Robert Nystrom
+//  https://books.apple.com/de/book/crafting-interpreters/id1578795812?l=en-GB
+//  This material may be protected by copyright.
 
 /// A **post-order traversal** interpreter. Each node evaluates its children before doing its own work.
 final class Interpreter { // Runtime, while Parser is compile-time
+  private let environment: Environment
+
+  init(environment: Environment = Environment()) {
+    self.environment = environment
+  }
+
   func interpret(statements: [Statement]) {
     do {
       try statements.forEach(execute(statement:))
@@ -77,6 +89,12 @@ extension Interpreter: Expression.Visitor {
   //  parenthesized expression, they simply return the node for the inner expression.
   //  We do create a node for parentheses in Lox because we’ll need it later to
   //  correctly handle the left-hand sides of assignment expressions.”
+  //
+  //  Excerpt From
+  //  Crafting Interpreters
+  //  Robert Nystrom
+  //  https://books.apple.com/de/book/crafting-interpreters/id1578795812?l=en-GB
+  //  This material may be protected by copyright.
   func visitGroupingExpression(_ expression: Expression.Grouping) throws -> LiteralValue? {
     try evaluate(expression: expression.expression)
   }
@@ -193,11 +211,35 @@ extension Interpreter: Expression.Visitor {
       return nil
     }
   }
+
+  func visitVarExpression(_ expression: Expression.Variable) throws -> LiteralValue {
+    try environment.get(expression.name)
+  }
 }
 
 // MARK: - Statement.Visitor
 
 extension Interpreter: Statement.Visitor {
+  func visitVarStatement(_ statement: Statement.Var) throws {
+    //  “We could make it a runtime error. We’d let you define an uninitialized variable,
+    //  but if you accessed it before assigning to it, a runtime error would occur. It’s
+    //  not a bad idea, but most dynamically typed languages don’t do that. Instead,
+    //  we’ll keep it simple and say that Lox sets a variable to nil if it isn’t
+    //  explicitly initialized.”
+    //
+    //  Excerpt From
+    //  Crafting Interpreters
+    //  Robert Nystrom
+    //  tps://books.apple.com/de/book/crafting-interpreters/id1578795812?l=en-GB
+    //  This material may be protected by copyright.
+    guard
+      let initializer = statement.initializer,
+      let value = try evaluate(expression: initializer)
+    else { return }
+
+    environment.define(statement.name.lexeme, value)
+  }
+  
   func visitExpressionStatement(_ statement: Statement.Expr) throws {
     try evaluate(expression: statement.expression)
   }

@@ -11,6 +11,7 @@ extension Expression {
     func visitGroupingExpression(_: Expression.Grouping) throws -> LiteralValue?
     func visitUnaryExpression(_: Expression.Unary) throws -> LiteralValue?
     func visitBinaryExpression(_: Expression.Binary) throws -> LiteralValue?
+    func visitVarExpression(_: Expression.Variable) throws -> LiteralValue
   }
 
   func accept(visitor: any Visitor) throws -> LiteralValue? {
@@ -23,7 +24,9 @@ extension Expression {
       try visitor.visitGroupingExpression(grouping)
     case let .binary(binary):
       try visitor.visitBinaryExpression(binary)
-    case .invalid, .variable: // FIXME: implement variable case
+    case let .variable(variable):
+      try visitor.visitVarExpression(variable)
+    case .invalid:
       nil
     }
   }

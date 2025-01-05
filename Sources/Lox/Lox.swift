@@ -112,16 +112,15 @@ public enum Lox {
   }
 }
 
-private extension Statement {
-  var expression: Expression {
-    switch self {
-    case let .expr(expressionStatement):
-      return expressionStatement.expression
-    case let .print(printStatement):
-      return printStatement.expression
-    case let .var(varExpression):
-//      return varExpression.initializer
-      fatalError("tbi")
-    }
-  }
-}
+//private extension Statement {
+//  var expression: Expression? {
+//    switch self {
+//    case let .expr(expressionStatement):
+//      expressionStatement.expression
+//    case let .print(printStatement):
+//      printStatement.expression
+//    case let .var(varExpression):
+//      varExpression.initializer
+//    }
+//  }
+//}

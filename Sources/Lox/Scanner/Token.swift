@@ -101,6 +101,7 @@ enum LiteralType: Equatable, CustomStringConvertible {
 
 struct Token: CustomStringConvertible, Equatable {
   let type: TokenType
+  /// A lexical unit of the language
   let lexeme: String
   let literal: LiteralType?
   let line: Int
