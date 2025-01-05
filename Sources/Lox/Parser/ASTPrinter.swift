@@ -6,15 +6,39 @@
 //
 
 final class ASTPrinter {
+  func print(_ statements: [Statement]) {
+    Swift.print(
+      """
+      \(ANSIColor.boldPurple.rawValue)>\(ANSIColor.default.rawValue) Here are the parsed AST statements and expressions
+      
+      \(statements.map { statement in
+        self.prettyPrintedAST(for: statement)
+      })
+      """,
+      terminator: "\n\n"
+    )
+  }
+
   func print(_ expression: Expression) {
     Swift.print(
       """
-      \(ANSIColor.boldPurple.rawValue)>\(ANSIColor.default.rawValue) Here are the parsed AST expressions:
+      \(ANSIColor.boldPurple.rawValue)>\(ANSIColor.default.rawValue) Here are the parsed AST statements and expressions:
 
       \(prettyPrintedAST(for: expression))
       """,
       terminator: "\n\n"
     )
+  }
+
+  private func prettyPrintedAST(for statement: Statement) -> String {
+    switch statement {
+    case let .print(printStatement):
+      return "PRINT(\(prettyPrintedAST(for: printStatement.expression)))"
+    case let .expr(expressionStatement):
+      return "EXPRESSION(\(prettyPrintedAST(for: expressionStatement.expression)))"
+    case let .var(varStatement):
+      return "VAR(\(varStatement.initializer.map(prettyPrintedAST(for:)) ?? "empty declaration")"
+    }
   }
 
   private func prettyPrintedAST(for expression: Expression) -> String {
@@ -36,7 +60,9 @@ final class ASTPrinter {
         name: unary.operator.lexeme,
         expressions: unary.rightExpression
       )
-    case .invalid, .variable: // FIXME: implement variable case
+    case let .variable(variable):
+      return "VAR \(variable.name.lexeme)"
+    case .invalid:
       return "" // discarded
     }
   }
@@ -60,6 +86,19 @@ extension Optional where Wrapped == String {
       return value
     case .none:
       return "nil"
+    }
+  }
+}
+
+private extension Statement {
+  var expression: Expression? {
+    switch self {
+    case let .expr(expressionStatement):
+      expressionStatement.expression
+    case let .print(printStatement):
+      printStatement.expression
+    case let .var(varExpression):
+      varExpression.initializer
     }
   }
 }

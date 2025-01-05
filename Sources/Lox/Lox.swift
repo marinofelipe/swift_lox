@@ -101,11 +101,7 @@ public enum Lox {
     #if DEBUG
     if debugAST {
       let astPrinter = ASTPrinter()
-      statements
-        .compactMap(\.expression)
-        .forEach { expression in
-          astPrinter.print(expression)
-        }
+      astPrinter.print(statements)
     }
     #endif
 
@@ -138,18 +134,3 @@ public enum Lox {
     hadRuntimeError = true
   }
 }
-
-#if DEBUG
-private extension Statement {
-  var expression: Expression? {
-    switch self {
-    case let .expr(expressionStatement):
-      expressionStatement.expression
-    case let .print(printStatement):
-      printStatement.expression
-    case let .var(varExpression):
-      varExpression.initializer
-    }
-  }
-}
-#endif
