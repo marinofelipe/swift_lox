@@ -17,21 +17,44 @@ public struct LoxCLI: ParsableCommand {
       .customLong("file"),
       .short
     ],
-    help: """
-            A relative or absolute file path that contains lox code to be executed
-            """
+    help: "A relative or absolute file path that contains lox code to be executed"
   )
   var filePath: URL?
+
+  @Flag(
+    wrappedValue: false,
+    name: [
+      .long,
+      .customLong("tokens"),
+    ],
+    help: """
+    Whether or not the Scanner generated tokens should be printed. 
+    Useful for debugging the Interpreter.
+    """
+  )
+  var debugTokens: Bool
+
+  @Flag(
+    wrappedValue: false,
+    name: [
+      .long,
+      .customLong("ast"),
+    ],
+    help: """
+    Whether or not the Parser generated AST should be printed. 
+    Useful for debugging the Interpreter.
+    """
+  )
+  var debugAST: Bool
 
   public init() {}
 
   public func run() throws {
-    var args = [String]()
-    if let filePath = filePath {
-      args.append(filePath.path)
-    }
-
-    try Lox.main(args: args)
+    try Lox.main(
+      runFilePath: filePath?.absoluteString,
+      debugTokens: debugTokens,
+      debugAST: debugAST
+    )
   }
 }
 

@@ -9,15 +9,34 @@ import Foundation
 
 public enum Lox {
   private static let interpreter = Interpreter()
+
   private static var hadError = false
   private static var hadRuntimeError = false
 
+  private static var debugTokens = false
+  private static var debugAST = false
+
   public static func main(args: [String]) throws {
-    if args.count > 1 {
+    if args.count > 3 {
       print("Usage: swift_lox [script]")
       exit(64)
-    } else if args.count == 1 {
+    } else if args.count == 3 {
       try runFile(path: args[0])
+    } else {
+      try runPrompt()
+    }
+  }
+
+  public static func main(
+    runFilePath: String?,
+    debugTokens: Bool = false,
+    debugAST: Bool = false
+  ) throws {
+    self.debugTokens = debugTokens
+    self.debugAST = debugAST
+
+    if let runFilePath {
+      try runFile(path: runFilePath)
     } else {
       try runPrompt()
     }
@@ -64,10 +83,14 @@ public enum Lox {
   private static func run(source: String) {
     let scanner = Scanner(source: source)
     let tokens = scanner.scanTokens()
-
-    print("Here are the Scanner generated tokens:", terminator: "\n\n")
-    print(tokens.map(\.description).joined(separator: "\n"))
-    print("\n")
+    
+    #if DEBUG
+    if debugTokens {
+      print("Here are the Scanner generated tokens:", terminator: "\n\n")
+      print(tokens.map(\.description).joined(separator: "\n"))
+      print("\n")
+    }
+    #endif
 
     let parser = Parser(tokens: tokens)
     let statements = parser.parse()
@@ -76,10 +99,14 @@ public enum Lox {
     guard !statements.isEmpty, !hadError else { return }
 
     #if DEBUG
-//    let astPrinter = ASTPrinter()
-//    statements.forEach { statement in
-//      astPrinter.print(statement.expression)
-//    }
+    if debugAST {
+      let astPrinter = ASTPrinter()
+      statements
+        .compactMap(\.expression)
+        .forEach { expression in
+          astPrinter.print(expression)
+        }
+    }
     #endif
 
     interpreter.interpret(statements: statements)
@@ -112,15 +139,17 @@ public enum Lox {
   }
 }
 
-//private extension Statement {
-//  var expression: Expression? {
-//    switch self {
-//    case let .expr(expressionStatement):
-//      expressionStatement.expression
-//    case let .print(printStatement):
-//      printStatement.expression
-//    case let .var(varExpression):
-//      varExpression.initializer
-//    }
-//  }
-//}
+#if DEBUG
+private extension Statement {
+  var expression: Expression? {
+    switch self {
+    case let .expr(expressionStatement):
+      expressionStatement.expression
+    case let .print(printStatement):
+      printStatement.expression
+    case let .var(varExpression):
+      varExpression.initializer
+    }
+  }
+}
+#endif
