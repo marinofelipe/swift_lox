@@ -212,7 +212,7 @@ extension Interpreter: Expression.Visitor {
     }
   }
 
-  func visitVarExpression(_ expression: Expression.Variable) throws -> LiteralValue {
+  func visitVarExpression(_ expression: Expression.Variable) throws -> LiteralValue? {
     try environment.get(expression.name)
   }
 }
@@ -232,10 +232,10 @@ extension Interpreter: Statement.Visitor {
     //  Robert Nystrom
     //  tps://books.apple.com/de/book/crafting-interpreters/id1578795812?l=en-GB
     //  This material may be protected by copyright.
-    guard
-      let initializer = statement.initializer,
-      let value = try evaluate(expression: initializer)
-    else { return }
+    var value: LiteralValue?
+    if let initializer = statement.initializer {
+      value = try evaluate(expression: initializer)
+    }
 
     environment.define(statement.name.lexeme, value)
   }

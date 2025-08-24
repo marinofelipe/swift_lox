@@ -8,9 +8,9 @@
 final class Environment {
   typealias VariableName = String
 
-  private var values: [VariableName: LiteralValue] = [:]
+  private var values: [VariableName: LiteralValue?] = [:]
 
-  func get(_ token: Token) throws -> LiteralValue {
+  func get(_ token: Token) throws -> LiteralValue? {
     guard let value = values[token.lexeme] else {
       // For lox, the error is runtime instead of compile-time, because
       // otherwise it's tricky to deal with recursive functions and because Lox's program
@@ -24,7 +24,7 @@ final class Environment {
     return value
   }
 
-  func define(_ name: VariableName, _ value: LiteralValue) {
+  func define(_ name: VariableName, _ value: LiteralValue?) {
     // it doesn't check for the existence of the key,
     // which means the language allows redefining a variable statement
     values[name] = value

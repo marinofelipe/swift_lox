@@ -11,7 +11,7 @@ extension Expression {
     func visitGroupingExpression(_: Expression.Grouping) throws -> LiteralValue?
     func visitUnaryExpression(_: Expression.Unary) throws -> LiteralValue?
     func visitBinaryExpression(_: Expression.Binary) throws -> LiteralValue?
-    func visitVarExpression(_: Expression.Variable) throws -> LiteralValue
+    func visitVarExpression(_: Expression.Variable) throws -> LiteralValue?
   }
 
   func accept(visitor: any Visitor) throws -> LiteralValue? {

@@ -25,7 +25,7 @@ enum GenerateAST {
     case statement = "Statement"
   }
 
-  public static func main(outputDir: String) throws {
+  static func main(outputDir: String) throws {
     try defineExpressionAST(outputDir: outputDir)
     try defineStatementAST(outputDir: outputDir)
   }
