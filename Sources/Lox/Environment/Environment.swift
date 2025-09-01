@@ -5,6 +5,8 @@
 //  Created by Marino Felipe on 04.01.25.
 //
 
+// Lox requires explicitly declared variables
+
 final class Environment {
   typealias VariableName = String
 
@@ -22,6 +24,17 @@ final class Environment {
     }
 
     return value
+  }
+
+  func assign(_ name: Token, _ value: LiteralValue?) throws {
+    if values.keys.contains(name.lexeme) {
+      values[name.lexeme] = value
+    } else {
+      throw RuntimeError(
+        token: name,
+        message: "Undefined variable '\(name.lexeme)'."
+      )
+    }
   }
 
   func define(_ name: VariableName, _ value: LiteralValue?) {

@@ -215,6 +215,12 @@ extension Interpreter: Expression.Visitor {
   func visitVarExpression(_ expression: Expression.Variable) throws -> LiteralValue? {
     try environment.get(expression.name)
   }
+
+  func visitAssignExpression(_ expression: Expression.Assign) throws -> LiteralValue? {
+    let value = try evaluate(expression: expression.value)
+    try environment.assign(expression.name, value)
+    return value
+  }
 }
 
 // MARK: - Statement.Visitor

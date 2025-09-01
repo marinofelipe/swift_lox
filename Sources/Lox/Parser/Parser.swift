@@ -79,7 +79,8 @@
 // MARK: - Grammar
 
 // expression     → comma;
-// comma          → ternary ( (",") ternary)*;
+// comma          → assignment ( (",") assignment)*;
+// assignment     → ternary = ternary;
 // ternary        → equality ("?" expression : ":" expression)*;
 // equality       → comparison ( ( "!=" | "==" ) comparison )* ;
 // comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
@@ -93,6 +94,7 @@
 // From Lower to Higher precedence
 private enum BinaryExpression: CaseIterable {
   case comma // https://en.wikipedia.org/wiki/Comma_operator
+  case assignment
   case ternary // not binary, here for now for simplicity
   case equality
   case comparison
@@ -103,32 +105,36 @@ private enum BinaryExpression: CaseIterable {
   var tokenTypesToMatch: [TokenType] {
     switch self {
     case .comma:
-      return [
+      [
         .singleCharacter(.COMMA)
       ]
+    case .assignment:
+      [
+        .oneOrTwoCharacter(.EQUAL)
+      ]
     case .ternary:
-      return [
+      [
         .singleCharacter(.QUESTION_MARK) // only the opening
       ]
     case .equality:
-      return [
+      [
         .oneOrTwoCharacter(.BANG_EQUAL),
         .oneOrTwoCharacter(.EQUAL_EQUAL)
       ]
     case .comparison:
-      return [
+      [
         .oneOrTwoCharacter(.GREATER),
         .oneOrTwoCharacter(.GREATER_EQUAL),
         .oneOrTwoCharacter(.LESS),
         .oneOrTwoCharacter(.LESS_EQUAL)
       ]
     case .factor:
-      return [
+      [
         .singleCharacter(.SLASH),
         .singleCharacter(.STAR)
       ]
     case .term:
-      return [
+      [
         .singleCharacter(.MINUS),
         .singleCharacter(.PLUS)
       ]
@@ -171,9 +177,38 @@ final class Parser {
 // MARK: - Expressions
 
 private extension Parser {
+  
   // MARK: Binary operator rules
+
+  func expression() throws -> Expression {
+    try commaSeparatedExpressions()
+  }
+
   func commaSeparatedExpressions() throws -> Expression {
     try processBinaryExpression(type: .comma)
+  }
+
+  func assignment() throws -> Expression {
+    let expression = try ternary()
+
+    if match(types: .oneOrTwoCharacter(.EQUAL)) {
+      let equals = previous()
+      let value = try assignment() // called to parse the right-hand side
+
+      if case let .variable(varExpression) = expression {
+        return .assign(
+          Expression.Assign(
+            name: varExpression.name,
+            value: value
+          )
+        )
+      }
+
+      // The parser isn't in an invalid state, therefore an error is not thrown
+      error(token: equals, message: "Invalid assignment target.")
+    }
+
+    return expression
   }
 
   func ternary() throws -> Expression {
@@ -222,6 +257,8 @@ private extension Parser {
         expression = try nextExpression(for: type)
       } else if type == .ternary {
         return try processTernary(expression: expression)
+      } else if type == .assignment {
+        return try assignment()
       } else {
         let `operator` = previous()
         let right = try nextExpression(for: type)
@@ -241,6 +278,8 @@ private extension Parser {
   func nextExpression(for binaryExpression: BinaryExpression) throws -> Expression {
     switch binaryExpression {
     case .comma:
+      try assignment()
+    case .assignment:
       try ternary()
     case .ternary:
       try equality()
@@ -276,6 +315,7 @@ private extension Parser {
   }
 
   // MARK: Unary operator rules
+
   func unary() throws -> Expression {
     while match(types: .oneOrTwoCharacter(.BANG), .singleCharacter(.MINUS)) {
       let `operator` = previous()
@@ -289,6 +329,7 @@ private extension Parser {
   }
 
   // highest precedence
+
   func primary() throws -> Expression {
     if match(types: .keyword(.FALSE)) {
       return .literal(Expression.Literal(value: .boolean(false)))
@@ -312,7 +353,7 @@ private extension Parser {
       return .variable(Expression.Variable(name: previous()))
     }
     if match(types: .singleCharacter(.LEFT_PARENTHESIS)) {
-      let expression = try commaSeparatedExpressions()
+      let expression = try expression()
       try consume(
         type: .singleCharacter(.RIGHT_PARENTHESIS),
         message: "Expect ')' after expression."
@@ -368,7 +409,7 @@ private extension Parser {
 
     var initializer: Expression?
     if match(types: .oneOrTwoCharacter(.EQUAL)) {
-      initializer = try commaSeparatedExpressions()
+      initializer = try expression()
     }
 
     try consume(
@@ -380,14 +421,14 @@ private extension Parser {
   }
 
   func printStatement() throws -> Statement {
-    let value = try commaSeparatedExpressions()
+    let value = try expression()
     try consume(type: .singleCharacter(.SEMICOLON), message: "Expect ';' after value.")
 
     return .print(Statement.Print(expression: value))
   }
 
   func expressionStatement() throws -> Statement {
-    let value = try commaSeparatedExpressions()
+    let value = try expression()
     try consume(type: .singleCharacter(.SEMICOLON), message: "Expect ';' after expression.")
 
     return .expr(Statement.Expr(expression: value))
@@ -444,6 +485,7 @@ private extension Parser {
     tokens[currentIndex - 1]
   }
 
+  @discardableResult
   func error(
     token: Token,
     message: String,

@@ -36,6 +36,7 @@ enum GenerateAST {
       outputDir: outputDir,
       types: [
         // Using my own notation/form with `;` so that `:` can be only used for the typed properties
+        "Assign   ; name: Token, value: Expression",
         "Binary   ; leftExpression: Expression, `operator`: Token, rightExpression: Expression",
         "Grouping ; expression: Expression",
         "Literal  ; value: LiteralValue?",

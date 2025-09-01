@@ -43,6 +43,8 @@ final class ASTPrinter {
 
   private func prettyPrintedAST(for expression: Expression) -> String {
     switch expression {
+    case let .assign(_):
+      fatalError()
     case let .binary(binary):
       return parenthesize(
         name: binary.`operator`.lexeme,
